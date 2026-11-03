@@ -36,13 +36,18 @@ const BLOCKED_KEY = "scootmobiel-blocked";
 const $ = (id) => document.getElementById(id);
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const status = (msg) => ($("status").textContent = msg);
+// Icons from the inline sprite in index.html (colour gradients; decorative, so hidden from screen readers).
+const ic = (name, cls = "") => `<svg class="ic${cls ? " " + cls : ""}" aria-hidden="true" focusable="false"><use href="#i-${name}"/></svg>`;
+// Set a button's icon and label in one go (keeps the icon when the text changes).
+function setBtn(btn, icon, cls, label) { btn.innerHTML = `${ic(icon, cls)} <span class="lbl">${esc(label)}</span>`; }
+const phone = matchMedia("(max-width: 760px)");
 // Feedback on something the rider just did: a message at the top of the screen, visible on every
 // screen size (the status line at the bottom of the panel is easy to miss, especially on a phone).
 let toastTimer = 0;
-function say(msg, { long = false } = {}) {
+function say(msg, { long = false, icon = "info", tone = "teal" } = {}) {
   status(msg);
   const t = $("toast");
-  t.innerHTML = dualText(msg);
+  t.innerHTML = ic(icon, tone) + dualText(msg);
   t.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => (t.hidden = true), long ? 9000 : 4500);
@@ -91,7 +96,7 @@ class DutchCredits {
     this.el = document.createElement("div");
     this.el.className = "maplibregl-ctrl maplibregl-ctrl-attrib credits-map";
     this.el.setAttribute("translate", "no");
-    this.el.innerHTML = '<button type="button" class="credits-toggle" aria-expanded="true" aria-label="Bronvermelding van de kaart">ⓘ</button>' +
+    this.el.innerHTML = '<button type="button" class="credits-toggle" aria-expanded="true" aria-label="Bronvermelding van de kaart"><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-info"/></svg></button>' +
       '<span class="credits-text">Kaart © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-bijdragers · © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · via <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a></span>';
     const btn = this.el.querySelector(".credits-toggle");
     const setOpen = (open) => { this.el.classList.toggle("open", open); btn.setAttribute("aria-expanded", open); };
@@ -121,7 +126,7 @@ try {
     attributionControl: false,
     locale: NL_LOCALE,
   });
-  map.addControl(new DutchCredits(), "bottom-right");
+  map.addControl(new DutchCredits(), phone.matches ? "top-left" : "bottom-right");
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
   map.addControl(new maplibregl.GeolocateControl({ trackUserLocation: false }), "top-right");
   map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
@@ -134,7 +139,7 @@ try {
 const follower = createFollower(map, {
   reduceMotion,
   pitch: () => (is3D($("style").value) ? 60 : 30),
-  onEnd: () => ($("follow").textContent = "▶ Volg route"),
+  onEnd: () => setBtn($("follow"), "play", "teal", "Volg route"),
 });
 
 // ---------- data ----------
@@ -212,16 +217,18 @@ map.on("styleimagemissing", (e) => {
 function apply3D(v) {
   const layers = map.getStyle()?.layers || [];
   for (const l of layers) {
-    if (l.type === "fill-extrusion") map.setLayoutProperty(l.id, "visibility", is3D(v) ? "visible" : "none");
+    if (l.type !== "fill-extrusion") continue;
+    map.setLayoutProperty(l.id, "visibility", is3D(v) ? "visible" : "none");
+    map.setLayerZoomRange(l.id, 12.5, 24); // Liberty starts at 14: too far in to see them on a route overview
   }
   if (!is3D(v) || layers.some((l) => l.type === "fill-extrusion") || !BUILDING_3D[v]) return;
   const firstLabel = layers.find((l) => l.type === "symbol")?.id;
   map.addLayer({
-    id: "buildings-3d", type: "fill-extrusion", source: "openmaptiles", "source-layer": "building", minzoom: 13,
+    id: "buildings-3d", type: "fill-extrusion", source: "openmaptiles", "source-layer": "building", minzoom: 12.5,
     filter: ["!=", ["get", "hide_3d"], true],
     paint: {
       "fill-extrusion-color": BUILDING_3D[v],
-      "fill-extrusion-height": ["interpolate", ["linear"], ["zoom"], 13, 0, 14.5, ["coalesce", ["get", "render_height"], 5]],
+      "fill-extrusion-height": ["coalesce", ["get", "render_height"], 5],
       "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
       "fill-extrusion-opacity": 0.85,
       "fill-extrusion-vertical-gradient": true,
@@ -247,7 +254,7 @@ map.on("click", (ev) => {
   if (hit?.layer.id.startsWith("route-")) return showRoutePopup(ev.lngLat);
   if (hit) return showPopup(hit);
   const s = router.snap(ev.lngLat.lng, ev.lngLat.lat);
-  if (!s) return say("Daar is geen pad in de buurt.");
+  if (!s) return say("Daar is geen pad in de buurt.", { icon: "alert", tone: "sun" });
   stops[activeStop] = { lon: +s.point[0].toFixed(5), lat: +s.point[1].toFixed(5), name: placeName(s.point[0], s.point[1]) };
   // Next click fills the next stop; the last one keeps moving the destination.
   activeStop = Math.min(activeStop + 1, stops.length - 1);
@@ -368,25 +375,6 @@ const inRing = (pt, r) => {
   return c;
 };
 
-// The place picker: one list, grouped per town or village (Hoorn first), with its neighbourhoods
-// and hamlets underneath. Native <optgroup>s read well on phones and with a screen reader.
-function placeOptions() {
-  const groups = new Map();
-  for (const p of places) {
-    if (!groups.has(p.group)) groups.set(p.group, []);
-    groups.get(p.group).push(p);
-  }
-  const order = [...groups.keys()].sort((a, b) => (a === "Hoorn" ? -1 : b === "Hoorn" ? 1 : a.localeCompare(b, "nl")));
-  return order.map((g) => {
-    const list = groups.get(g);
-    const head = list.find((p) => p.name === g);
-    // Neighbourhoods first, then hamlets, each alphabetical.
-    const rest = list.filter((p) => p !== head).sort((a, b) => (b.kind === "wijk") - (a.kind === "wijk") || a.name.localeCompare(b.name, "nl"));
-    const opt = (p, label) => `<option value="${esc(p.name)}">${esc(label)}</option>`;
-    const headLabel = head && rest.length ? `${g} (${head.kind === "town" ? "centrum" : "dorp"})` : g;
-    return `<optgroup label="${esc(g)}">${head ? opt(head, headLabel) : ""}${rest.map((p) => opt(p, p.name)).join("")}</optgroup>`;
-  }).join("");
-}
 
 function plan() {
   if (!router) return;
@@ -397,7 +385,7 @@ function plan() {
   if (coords.some((c) => !c)) return;
   const prof = $("profile").value, avoid = $("avoid").checked, blocked = blockedEdges();
   const snaps = coords.map((c) => router.snap(c[0], c[1]));
-  if (snaps.some((s) => !s)) return say("Een van de punten ligt te ver van een pad.");
+  if (snaps.some((s) => !s)) return say("Een van de punten ligt te ver van een pad.", { icon: "alert", tone: "sun" });
   const t0 = performance.now();
   const legs = [];
   for (let i = 0; i < snaps.length - 1; i++) {
@@ -447,16 +435,18 @@ function drawStops() {
 function fit(coords) {
   const b = new maplibregl.LngLatBounds(coords[0], coords[0]);
   coords.forEach((c) => b.extend(c));
-  // On a phone, keep the route clear of the message at the top and the summary card at the bottom.
-  const padding = innerWidth <= 760 ? { top: 70, bottom: 150, left: 30, right: 60 } : 60;
+  // On a phone, keep the route clear of the message at the top and the sheet at the bottom.
+  const sheetTop = phone.matches ? $("panel").getBoundingClientRect().top : innerHeight;
+  const padding = phone.matches ? { top: 64, bottom: Math.max(40, innerHeight - sheetTop + 16), left: 24, right: 56 } : 40;
+  // Close enough that the 3D buildings show straight away (they appear from zoom 12.5).
   if (!flownIn && !reduceMotion) {
     // First route of the visit: a slow, tilted fly-in.
     flownIn = true;
-    map.fitBounds(b, { padding, maxZoom: 15.5, duration: 3200, pitch: is3D($("style").value) ? 50 : 0, bearing: -12, essential: false });
+    map.fitBounds(b, { padding, maxZoom: 16.5, duration: 3200, pitch: is3D($("style").value) ? 55 : 0, bearing: -12, essential: false });
     return;
   }
   flownIn = true;
-  map.fitBounds(b, { padding, duration: reduceMotion ? 0 : 900, maxZoom: 16 });
+  map.fitBounds(b, { padding, duration: reduceMotion ? 0 : 900, maxZoom: 16.5 });
 }
 
 // ---------- result panel ----------
@@ -498,11 +488,11 @@ function showResult(route) {
     else parts.push("Wind vooral van opzij.");
     if (w.temp < 5) parts.push("Het is koud: kleed je warm aan.");
     if (w.rainChance >= 50) parts.push(`Kans op regen de komende uren: ${w.rainChance}%.`);
-    $("weather").innerHTML = dualText(parts.join(" "));
+    $("weather").innerHTML = ic("wind", "sky") + dualText(parts.join(" "));
     $("weather").hidden = false;
     const best = bestDeparture(route.coords, w, retour);
     $("best").hidden = !best;
-    if (best) $("best").innerHTML = dualText(`Tip: vertrek liever om ${best.time}. Dan heb je minder last van de wind${best.rain < best.nowRain ? ` en is de kans op regen kleiner (${best.rain}%)` : ""}.`);
+    if (best) $("best").innerHTML = ic("clock", "sun") + dualText(`Tip: vertrek liever om ${best.time}. Dan heb je minder last van de wind${best.rain < best.nowRain ? ` en is de kans op regen kleiner (${best.rain}%)` : ""}.`);
   } else { $("weather").hidden = true; $("best").hidden = true; }
 
   const warns = [];
@@ -510,7 +500,8 @@ function showResult(route) {
   if (unpaved > 50) warns.push(`${Math.round(unpaved)} m onverhard (gestippeld op de kaart).`);
   if (busy > 100) warns.push(`${Math.round(busy)} m langs of over een drukke weg (rood).`);
   $("warn").hidden = !warns.length;
-  $("warn").innerHTML = dualText(warns.join(" "));
+  $("warn").innerHTML = ic("alert", "sun") + dualText(warns.join(" "));
+  renderGist(route, byCls, busy);
 
   renderObstacles(route);
   renderAlong(route);
@@ -518,12 +509,30 @@ function showResult(route) {
   updateSaveButton();
 }
 
+// One plain sentence with what matters most; the details sit under "Meer over deze route".
+function renderGist(route, byCls, busy) {
+  const share = (n) => n / route.len;
+  const paths = Math.round(share(byCls[0] + byCls[1]) * 100);
+  const quiet = share(byCls[0] + byCls[1] + byCls[2]) >= 0.75;
+  let text = quiet ? `Rustige route: ${paths}% over fiets- en voetpaden.`
+    : busy > 100 ? `Deels langs drukkere wegen; ${paths}% over fiets- en voetpaden.`
+    : `${paths}% over fiets- en voetpaden, de rest over gewone straten.`;
+  const hard = route.obstacles.filter((o) => o.hard).length;
+  if (hard) text += ` ${hard} lastig${hard === 1 ? " obstakel" : "e obstakels"} onderweg, zie "Meer over deze route".`;
+  if (weather) {
+    const hw = headwind(route.coords, weather);
+    text += hw > 1 ? " Tegenwind op de heenweg." : hw < -1 ? " Wind mee op de heenweg." : "";
+    if (weather.rainChance >= 50) text += " Kans op regen.";
+  }
+  $("gist").innerHTML = ic(hard ? "alert" : "check", hard ? "sun" : "teal") + dualText(text);
+}
+
 function renderObstacles(route) {
   const box = $("obstacles");
   const obs = route.obstacles;
   if (!obs.length) {
     box.hidden = false;
-    box.innerHTML = '<p class="ok">✓ Geen bekende hekjes, paaltjes of hoge stoepranden op deze route.</p>';
+    box.innerHTML = `<p class="ok">${ic("check", "teal")} Geen bekende hekjes, paaltjes of hoge stoepranden op deze route.</p>`;
     return;
   }
   const counts = {};
@@ -539,7 +548,7 @@ function renderObstacles(route) {
   box.hidden = false;
   box.querySelectorAll("[data-o]").forEach((b) => b.addEventListener("click", () => {
     const o = hard[+b.dataset.o];
-    showMapOnPhone();
+    if (phone.matches) setSheet("peek");
     map.flyTo({ center: [o.lon, o.lat], zoom: 18, duration: reduceMotion ? 0 : 1200 });
   }));
 }
@@ -561,7 +570,7 @@ function renderAlong(route) {
     return n ? `${n} ${n === 1 ? one : many}` : null;
   }).filter(Boolean);
   $("along").hidden = false;
-  $("along").innerHTML = dualText(parts.length ? `Binnen ${NEAR_ROUTE} m van de route: ${parts.join(", ")}.` : `Geen toiletten of bankjes bekend binnen ${NEAR_ROUTE} m van de route.`);
+  $("along").innerHTML = ic("pin", "violet") + dualText(parts.length ? `Binnen ${NEAR_ROUTE} m van de route: ${parts.join(", ")}.` : `Geen toiletten of bankjes bekend binnen ${NEAR_ROUTE} m van de route.`);
 }
 
 const haversine = (a, b) => {
@@ -641,35 +650,31 @@ function addToilet() {
     const score = d * (p.w === "yes" ? 0.6 : 1);
     if (!best || score < best.score) best = { p, d, at, score };
   }
-  if (!best || best.d > 3000) return say("Er is geen openbaar toilet bekend in de buurt van deze route.");
+  if (!best || best.d > 3000) return say("Er is geen openbaar toilet bekend in de buurt van deze route.", { icon: "alert", tone: "sun" });
   const leg = lastRoute.legStarts.filter((s) => s <= best.at).length - 1;
   const name = best.p.n ? `Toilet: ${best.p.n}` : best.p.w === "yes" ? "Rolstoeltoilet" : "Openbaar toilet";
   stops.splice(leg + 1, 0, { lon: best.p.lon, lat: best.p.lat, name });
   renderStops();
   plan();
-  say(`🚻 Tussenstop toegevoegd: ${name}, ${Math.round(best.d)} m van je route. Je ziet het op de kaart als extra stop.`, { long: true });
+  say(`Tussenstop toegevoegd: ${name}, ${Math.round(best.d)} m van je route. Je ziet het op de kaart als extra stop.`, { long: true, icon: "toilet", tone: "sky" });
   showMapOnPhone();
 }
 
 // ---------- stops UI ----------
+// Each stop is a large button that opens the place picker (search + grouped list).
 function renderStops() {
-  const opts = placeOptions();
   $("stopList").innerHTML = stops.map((s, i) => {
     const start = i === 0, end = i === stops.length - 1;
     const label = start ? "Van" : end ? "Naar" : `Tussenstop ${i}`;
-    const custom = s.place ? "" : `<option value="__pt" selected>${esc(stopLabel(s))}</option>`;
     return `<div class="stop${i === activeStop ? " active" : ""}">
       <span class="pin ${start ? "start" : end ? "end" : ""}" aria-hidden="true">${start ? "A" : end ? "B" : i}</span>
-      <select data-i="${i}" aria-label="${label}">${custom}${opts}</select>
-      ${!start && !end ? `<button type="button" data-rm="${i}" aria-label="Verwijder ${label}">✕</button>` : "<span></span>"}
+      <button type="button" class="stop-pick" data-i="${i}" aria-label="${label}: ${esc(stopLabel(s))}. Tik om te wijzigen.">
+        <small>${label}</small><span>${esc(stopLabel(s))}</span>${ic("search")}
+      </button>
+      ${!start && !end ? `<button type="button" class="stop-rm" data-rm="${i}" aria-label="Verwijder ${label}">${ic("close")}</button>` : "<span></span>"}
     </div>`;
   }).join("");
-  $("stopList").querySelectorAll("select").forEach((el) => {
-    const s = stops[+el.dataset.i];
-    if (s.place) el.value = s.place;
-    el.addEventListener("focus", () => { activeStop = +el.dataset.i; markActive(); });
-    el.addEventListener("change", () => { stops[+el.dataset.i] = { place: el.value }; renderStops(); plan(); });
-  });
+  $("stopList").querySelectorAll(".stop-pick").forEach((b) => b.addEventListener("click", () => openPicker(+b.dataset.i, b)));
   $("stopList").querySelectorAll("[data-rm]").forEach((b) => b.addEventListener("click", () => {
     stops.splice(+b.dataset.rm, 1);
     activeStop = Math.min(activeStop, stops.length - 1);
@@ -679,6 +684,63 @@ function renderStops() {
 function markActive() {
   $("stopList").querySelectorAll(".stop").forEach((el, i) => el.classList.toggle("active", i === activeStop));
 }
+
+// ---------- place picker ----------
+let pickFor = 0, pickReturn = null;
+const fold = (t) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+function openPicker(i, from) {
+  pickFor = i; pickReturn = from || null;
+  activeStop = i; markActive();
+  $("pickerTitle").textContent = i === 0 ? "Waar vertrek je?" : i === stops.length - 1 ? "Waar wil je heen?" : `Tussenstop ${i}`;
+  $("pickerInput").value = "";
+  renderPicker("");
+  $("picker").showModal();
+  // On phones the keyboard would cover half the list; focus the search there only on request.
+  if (!phone.matches) $("pickerInput").focus();
+}
+function renderPicker(q) {
+  const f = fold(q);
+  const groups = new Map();
+  for (const p of places) {
+    if (f && !fold(p.name).includes(f) && !fold(p.group).includes(f)) continue;
+    if (!groups.has(p.group)) groups.set(p.group, []);
+    groups.get(p.group).push(p);
+  }
+  const order = [...groups.keys()].sort((a, b) => (a === "Hoorn" ? -1 : b === "Hoorn" ? 1 : a.localeCompare(b, "nl")));
+  let n = 0;
+  const row = (value, label, sub, icon, tone) => { n++; return `<li><button type="button" data-v="${esc(value)}">${ic(icon, tone)}<span>${esc(label)}${sub ? `<small>${esc(sub)}</small>` : ""}</span></button></li>`; };
+  let html = pickFor === 0 && !f ? `<ul class="pick-group">${row("__here", "Mijn locatie", "Start waar je nu bent", "pin", "sky")}</ul>` : "";
+  for (const g of order) {
+    const list = groups.get(g);
+    const head = list.find((p) => p.name === g);
+    const rest = list.filter((p) => p !== head).sort((a, b) => (b.kind === "wijk") - (a.kind === "wijk") || a.name.localeCompare(b.name, "nl"));
+    html += `<h3 class="pick-head">${esc(g)}</h3><ul class="pick-group">`;
+    if (head) html += row(head.name, head.name, rest.length ? (head.kind === "town" ? "centrum" : "dorp") : "", "pin", "teal");
+    for (const p of rest) html += row(p.name, p.name, p.kind === "wijk" ? "wijk" : "buurtschap", "pin", p.kind === "wijk" ? "violet" : "sun");
+    html += "</ul>";
+  }
+  $("pickerList").innerHTML = html || `<p class="pick-none">Niets gevonden voor "${esc(q)}". Probeer een deel van de naam, of tik op de kaart.</p>`;
+  $("pickerCount").textContent = f ? `${n} ${n === 1 ? "resultaat" : "resultaten"}` : "";
+}
+$("pickerInput").addEventListener("input", () => renderPicker($("pickerInput").value));
+$("pickerInput").addEventListener("keydown", (e) => {
+  // Enter picks the first match.
+  if (e.key === "Enter") { e.preventDefault(); $("pickerList").querySelector("button")?.click(); }
+});
+$("pickerList").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-v]");
+  if (!b) return;
+  $("picker").close();
+  if (b.dataset.v === "__here") return locate();
+  stops[pickFor] = { place: b.dataset.v };
+  activeStop = Math.min(pickFor + 1, stops.length - 1);
+  renderStops(); plan(); showMapOnPhone();
+});
+$("picker").addEventListener("close", () => {
+  // Back to the stop that opened it (the list was re-rendered, so find it again).
+  const again = $("stopList").querySelector(`.stop-pick[data-i="${pickFor}"]`) || pickReturn;
+  again?.focus();
+});
 
 function renderPresets() {
   const have = new Set(places.map((p) => p.name));
@@ -728,7 +790,7 @@ function showPlaces(cat) {
 function routeName() { return `${stopLabel(stops[0])} → ${stopLabel(stops[stops.length - 1])}${stops.length > 2 ? ` (${stops.length - 2} tussenstop${stops.length > 3 ? "s" : ""})` : ""}`; }
 function updateSaveButton() {
   const fav = saved.isFavourite(location.hash);
-  $("save").textContent = fav ? "★ Bewaard" : "☆ Bewaar";
+  setBtn($("save"), "star", fav ? "sun" : "sun outline", fav ? "Bewaard" : "Bewaar");
   $("save").setAttribute("aria-pressed", fav);
 }
 $("save").addEventListener("click", saveFavourite);
@@ -739,7 +801,7 @@ function saveFavourite() {
     const name = prompt("Naam voor deze route:", routeName());
     if (name === null) return;
     saved.addFavourite(name.trim() || routeName(), location.hash);
-    say("⭐ Bewaard bij Mijn routes (alleen in deze browser).");
+    say("Bewaard bij Mijn routes (alleen in deze browser).", { icon: "star", tone: "sun" });
   }
   updateSaveButton();
   renderSaved();
@@ -748,7 +810,7 @@ function renderSaved() {
   const { fav, recent } = saved.all();
   const others = recent.filter((r) => !fav.some((f) => f.hash === r.hash) && r.hash !== location.hash);
   $("savedBox").hidden = !fav.length && !others.length;
-  $("favList").innerHTML = fav.map((f, i) => `<li><button type="button" class="link" data-h="${esc(f.hash)}">★ ${esc(f.name)}</button><button type="button" class="ghost tiny" data-del="${i}" aria-label="Verwijder favoriet ${esc(f.name)}">✕</button></li>`).join("");
+  $("favList").innerHTML = fav.map((f, i) => `<li><button type="button" class="link" data-h="${esc(f.hash)}">${ic("star", "sun")} ${esc(f.name)}</button><button type="button" class="ghost tiny" data-del="${i}" aria-label="Verwijder favoriet ${esc(f.name)}">${ic("close")}</button></li>`).join("");
   $("recentHead").hidden = !others.length;
   $("recentList").innerHTML = others.map((r) => `<li><button type="button" class="link" data-h="${esc(r.hash)}">${esc(r.name)}</button></li>`).join("");
   $("savedBox").querySelectorAll("[data-h]").forEach((b) => b.addEventListener("click", () => {
@@ -813,9 +875,9 @@ function locate() {
   if (!navigator.geolocation) return say("Je browser kan je locatie niet bepalen. Kies een dorp, of tik op de kaart.", { long: true });
   const btn = $("locate");
   btn.disabled = true;
-  btn.textContent = "📍 Locatie zoeken…";
-  say("📍 Je locatie wordt gezocht…");
-  const done = () => { btn.disabled = false; btn.textContent = "📍 Vanaf mijn locatie"; };
+  setBtn(btn, "pin", "sky", "Locatie zoeken…");
+  say("Je locatie wordt gezocht…", { icon: "pin", tone: "sky" });
+  const done = () => { btn.disabled = false; setBtn(btn, "pin", "sky", "Vanaf mijn locatie"); };
   const ok = (pos) => {
     done();
     const here = [pos.coords.longitude, pos.coords.latitude];
@@ -827,7 +889,7 @@ function locate() {
     stops[0] = { lon: +s.point[0].toFixed(5), lat: +s.point[1].toFixed(5), name: "Mijn locatie" };
     activeStop = 1;
     renderStops(); plan(); showMapOnPhone();
-    say(`📍 Gevonden! Je route begint nu bij jou${pos.coords.accuracy > 200 ? ` (nauwkeurig tot op ca. ${Math.round(pos.coords.accuracy / 100) / 10} km)` : ""}.`);
+    say(`Gevonden! Je route begint nu bij jou${pos.coords.accuracy > 200 ? ` (nauwkeurig tot op ca. ${Math.round(pos.coords.accuracy / 100) / 10} km)` : ""}.`, { icon: "pin", tone: "sky" });
   };
   // Laptops have no GPS; they ask the browser to guess from wifi. On Linux that often fails
   // (Firefox's location service stopped in 2024; many Chromium builds have none), so explain it.
@@ -848,7 +910,7 @@ const retourText = () => `${$("rArriveLabel").textContent === "weer terug" ? "Je
 $("speak").addEventListener("click", () => {
   const synth = window.speechSynthesis;
   if (!synth) return say("Voorlezen werkt niet in deze browser.");
-  if (synth.speaking) { synth.cancel(); $("speak").textContent = "🔊 Voorlezen"; return; }
+  if (synth.speaking) { synth.cancel(); setBtn($("speak"), "speaker", "teal", "Voorlezen"); return; }
   // Built from the written-out versions, so "13 min" is read as "13 minuten" and "2,5 km" as "2,5 kilometer".
   const text = [forSpeech(`Route van ${stopLabel(stops[0])} naar ${stopLabel(stops[stops.length - 1])}.`),
     `${spokenText($("rDist"))}, ongeveer ${spokenText($("rTime"))}. ${retourText()}`,
@@ -857,8 +919,8 @@ $("speak").addEventListener("click", () => {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "nl-NL";
   u.rate = 0.95;
-  u.onend = u.onerror = () => ($("speak").textContent = "🔊 Voorlezen");
-  $("speak").textContent = "■ Stoppen met voorlezen";
+  u.onend = u.onerror = () => setBtn($("speak"), "speaker", "teal", "Voorlezen");
+  setBtn($("speak"), "stop", "coral", "Stoppen met voorlezen");
   synth.speak(u);
 });
 
@@ -889,16 +951,16 @@ $("follow").addEventListener("click", toggleFollow);
 function toggleFollow() {
   if (follower.running) return stopFollow();
   if (!lastRoute) return;
-  $("follow").textContent = "■ Stoppen";
-  showMapOnPhone();
+  setBtn($("follow"), "stop", "coral", "Stoppen");
+  if (phone.matches) setSheet("peek");
   follower.start(lastRoute.coords);
 }
-function stopFollow() { follower.stop(); $("follow").textContent = "▶ Volg route"; }
+function stopFollow() { follower.stop(); setBtn($("follow"), "play", "teal", "Volg route"); }
 
 // ---------- share ----------
 $("share").addEventListener("click", async () => {
   writeHash();
-  try { await navigator.clipboard.writeText(location.href); say("🔗 Link gekopieerd. Plak hem in een bericht of mail."); }
+  try { await navigator.clipboard.writeText(location.href); say("Link gekopieerd. Plak hem in een bericht of mail.", { icon: "share", tone: "violet" }); }
   catch { say("Kopieer de link uit de adresbalk."); }
 });
 
@@ -940,7 +1002,7 @@ $("installNow").addEventListener("click", async () => {
   const { outcome } = await installEvent.userChoice;
   installEvent = null;
   $("installNow").hidden = true;
-  if (outcome === "accepted") say("📲 De planner staat nu op je beginscherm.");
+  if (outcome === "accepted") say("De planner staat nu op je beginscherm.", { icon: "phone", tone: "violet" });
 });
 addEventListener("appinstalled", () => ($("installHelp").hidden = true));
 (function setupInstallHelp() {
@@ -953,10 +1015,10 @@ addEventListener("appinstalled", () => ($("installHelp").hidden = true));
 
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") { if (follower.running) stopFollow(); popup?.remove(); return; }
-  if (e.ctrlKey || e.metaKey || e.altKey || $("help").open) return;
+  if (e.ctrlKey || e.metaKey || e.altKey || $("help").open || $("picker").open) return;
   if (e.target instanceof Element && e.target.closest("input, select, textarea, [contenteditable]")) return;
   if (e.key === "?") { e.preventDefault(); $("help").showModal(); return; }
-  if (e.key === "/") { e.preventDefault(); $("stopList").querySelector("select")?.focus(); return; }
+  if (e.key === "/") { e.preventDefault(); openPicker(0, $("stopList").querySelector(".stop-pick")); return; }
   if (!$("letterKeys").checked) return;
   const k = e.key.toLowerCase();
   const actions = {
@@ -969,20 +1031,36 @@ document.addEventListener("keydown", (e) => {
   if (actions[k]) { e.preventDefault(); actions[k](); }
 });
 
-// ---------- phone: map / planner tabs ----------
-const phone = matchMedia("(max-width: 760px)");
-function setView(v) {
-  document.body.dataset.view = v;
-  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.view === v));
-  // Keep keyboard and screen-reader users out of the hidden half.
-  $("panel").inert = phone.matches && v === "map";
-  if (v === "map") map.resize();
+// ---------- phone: the planner as a sheet over the map ----------
+// Three sizes: "peek" (just the route in short), "half" (map and planner together) and "full".
+// Sizing works with the arrow buttons, by tapping the grab bar, or by swiping it (WCAG 2.5.7: no drag needed).
+const SHEET = ["peek", "half", "full"];
+function setSheet(state) {
+  document.body.dataset.sheet = state;
+  const i = SHEET.indexOf(state);
+  $("sheetLess").disabled = i === 0;
+  $("sheetMore").disabled = i === SHEET.length - 1;
+  $("sheetGrab").setAttribute("aria-label", ["Paneel is klein. Tik voor groter.", "Paneel is half open. Tik voor groter.", "Paneel is helemaal open. Tik voor kleiner."][i]);
+  // In "peek" only the bar is on screen: keep keyboard and screen readers out of the rest.
+  for (const el of $("panel").children) if (!el.classList.contains("sheet-bar")) el.inert = phone.matches && state === "peek";
+  if (state !== "full") $("panel").scrollTop = 0;
 }
-function showMapOnPhone() { if (phone.matches) setView("map"); }
-document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
-$("summary").addEventListener("click", () => setView("plan"));
-phone.addEventListener("change", () => setView(document.body.dataset.view || "map"));
-setView("map");
+const sheetStep = (d) => setSheet(SHEET[Math.max(0, Math.min(SHEET.length - 1, SHEET.indexOf(document.body.dataset.sheet) + d))]);
+function showMapOnPhone() { if (phone.matches && document.body.dataset.sheet === "full") setSheet("half"); }
+$("sheetMore").addEventListener("click", () => sheetStep(1));
+$("sheetLess").addEventListener("click", () => sheetStep(-1));
+$("sheetGrab").addEventListener("click", () => (document.body.dataset.sheet === "full" ? setSheet("half") : sheetStep(1)));
+$("summaryText").addEventListener("click", () => document.body.dataset.sheet === "peek" && setSheet("half"));
+let dragY = null;
+$("panel").querySelector(".sheet-bar").addEventListener("pointerdown", (e) => { if (!e.target.closest(".sheet-size")) dragY = e.clientY; });
+addEventListener("pointerup", (e) => {
+  if (dragY === null) return;
+  const d = e.clientY - dragY;
+  dragY = null;
+  if (Math.abs(d) > 40) sheetStep(d < 0 ? 1 : -1);
+});
+phone.addEventListener("change", () => setSheet(document.body.dataset.sheet || "half"));
+setSheet("half");
 
 // ---------- offline app ----------
 const showOnline = () => ($("offline").hidden = navigator.onLine);

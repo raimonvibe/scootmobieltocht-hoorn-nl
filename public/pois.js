@@ -1,31 +1,42 @@
 // Places useful on a scootmobiel ride (from OpenStreetMap, built into public/data/pois.json).
 
 export const CATS = {
-  toilet: { label: "Toiletten", one: "toilet", color: "#3b8bd4", glyph: "WC", on: true },
-  bankje: { label: "Bankjes", one: "bankje", color: "#6d6a5f", glyph: "", on: false, small: true },
-  supermarkt: { label: "Supermarkten", one: "supermarkt", color: "#1a9850", glyph: "S", on: false },
-  apotheek: { label: "Apotheken", one: "apotheek", color: "#c2185b", glyph: "+", on: false },
-  laadpunt: { label: "Laadpunten", one: "laadpunt", color: "#f39c12", glyph: "⚡", on: true },
-  scootmobielwinkel: { label: "Scootmobielwinkels", one: "scootmobielwinkel", color: "#7b3fb5", glyph: "🛵", on: true },
+  toilet: { label: "Toiletten", one: "toilet", color: "#3b8bd4", light: "#7cc8ff", on: true },
+  bankje: { label: "Bankjes", one: "bankje", color: "#6d6a5f", light: "#a29d8f", on: false, small: true },
+  supermarkt: { label: "Supermarkten", one: "supermarkt", color: "#1a9850", light: "#5fd38f", on: false },
+  apotheek: { label: "Apotheken", one: "apotheek", color: "#c2185b", light: "#ff6fa3", on: false },
+  laadpunt: { label: "Laadpunten", one: "laadpunt", color: "#e08a00", light: "#ffd166", on: true },
+  scootmobielwinkel: { label: "Scootmobielwinkels", one: "scootmobielwinkel", color: "#5b3fc4", light: "#b693ff", on: true },
 };
 
-// Map icons drawn on a canvas, so they need no icon font or sprite sheet.
+// White pictograms on a 24×24 grid (the same drawings as the page's icon set).
+const GLYPH = {
+  toilet: "M8 4.6a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4zm8 0a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4zM6.4 9.2h3.2v5.2H8.9V19H7.1v-4.6h-.7zm8.2 0h2.8l1.8 6h-1.6V19h-1.2v-3.8h-.8V19h-1.2v-3.8h-1.6z",
+  supermarkt: "M3 4h2.6l2.2 10.2h9.6L19.6 7H7.3l-.5-2zM9 16.4a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6zm7 0a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6z",
+  apotheek: "M9.5 4h5v5.5H20v5h-5.5V20h-5v-5.5H4v-5h5.5z",
+  laadpunt: "M13.5 2 5 13.5h5.5L9.5 22 19 9.8h-5.6z",
+  scootmobielwinkel: "M6.2 3.5h2.6c.6 0 1 .4 1 1V11h4.9l2-6.4c.1-.4.5-.6.9-.6h1.9c.6 0 1 .6.8 1.2L17.8 14H6.6A2.6 2.6 0 0 1 4 11.4V5.7c0-1.2 1-2.2 2.2-2.2zM7.2 15.4a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6zm10.2 0a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6z",
+  bankje: "M4 9h16v3H4zm1 4h2v6H5zm12 0h2v6h-2zM4 13.5h16v2H4z",
+};
+
+// Map icons drawn on a canvas: a round badge with a colour gradient and a white pictogram.
 export function icon(cat) {
   const c = CATS[cat];
-  const size = c.small ? 18 : 30, r = size / 2, px = 2;
+  const size = c.small ? 22 : 34, r = size / 2, px = 2;
   const cv = document.createElement("canvas");
   cv.width = cv.height = size * px;
   const g = cv.getContext("2d");
   g.scale(px, px);
+  const grad = g.createLinearGradient(0, 0, size, size);
+  grad.addColorStop(0, c.light); grad.addColorStop(1, c.color);
   g.beginPath(); g.arc(r, r, r - 1.5, 0, Math.PI * 2);
-  g.fillStyle = c.color; g.fill();
-  g.lineWidth = 2; g.strokeStyle = "#fff"; g.stroke();
-  if (c.glyph) {
-    g.fillStyle = "#fff";
-    g.font = `bold ${c.glyph.length > 1 ? 11 : 15}px system-ui, sans-serif`;
-    g.textAlign = "center"; g.textBaseline = "middle";
-    g.fillText(c.glyph, r, r + 1);
-  }
+  g.fillStyle = grad; g.fill();
+  g.lineWidth = 2.2; g.strokeStyle = "#fff"; g.stroke();
+  const s = (size * 0.62) / 24;
+  g.translate(r - 12 * s, r - 12 * s);
+  g.scale(s, s);
+  g.fillStyle = "#fff";
+  g.fill(new Path2D(GLYPH[cat]), "evenodd");
   return { width: size * px, height: size * px, data: g.getImageData(0, 0, size * px, size * px).data };
 }
 

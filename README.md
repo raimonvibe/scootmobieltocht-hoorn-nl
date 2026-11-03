@@ -29,7 +29,10 @@ Gebouwd naar het voorbeeld van [amsterdam-metro-v2](https://github.com/raimonvib
 - 🗣️ **Goed voor te lezen**: op het scherm korte eenheden ("13 min", "2,5 km"); de voorleesknop en schermlezers krijgen een onzichtbare, uitgeschreven versie ("13 minuten", "2,5 kilometer")
 - 📍 **Vanaf mijn locatie** starten, en een **routebeschrijving met herkenningspunten** ("bij de supermarkt") die je kunt laten **voorlezen**
 - 🚫 **Leert van jou**: kon je ergens niet langs? Tik op de route, kies "Vermijd dit stuk", en de planner gaat er voortaan omheen. Of meld het direct op OpenStreetMap
-- 📱 **Werkt op elk scherm**: op de telefoon een kaart op volle grootte met tabbladen "Kaart" en "Planner" en een routesamenvatting boven de kaart; op tablet en computer een zijpaneel
+- 📱 **Werkt op elk scherm**: op de telefoon schuift de planner als paneel over de kaart (klein, half, helemaal open; met knoppen of vegen); op tablet en computer een zijpaneel
+- 🔎 **Plaats zoeken**: tik op Van of Naar en typ een deel van de naam ("kers" → Kersenboogerd), of kies uit de lijst per plaats
+- 🎨 **Eigen kleurige iconen** met kleurverloop in plaats van emoji, overal hetzelfde
+- ♿ **Toegankelijk**: tekst vanaf 17 px, knoppen van 48 px, alles met toetsenbord en schermlezer te bedienen, rekening met "beweging verminderen" en hoog contrast; gecontroleerd met axe (WCAG 2.2 AA)
 - 🎬 Een **fly-in** bij het openen en **kaartstijlen in 3D** (Kleur, Helder, Licht, Donker, Fjord), plus **Kleur (2D)** als platte terugval voor oudere of tragere apparaten
 
 ## Delen op social media
