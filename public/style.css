@@ -415,7 +415,6 @@ details.sources .credits { margin-top: 2px; font-size: 12px; }
 
 /* Text only for screen readers and the "Voorlezen" button (written-out units). */
 .sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.range-hint { font-weight: 700; color: var(--accent); }
 
 /* ---------- "Hoe werkt het?" ---------- */
 dialog.help { max-width: none; width: min(560px, calc(100vw - 24px)); max-height: min(86dvh, 900px); padding: 0; overflow: hidden; display: none; flex-direction: column; }

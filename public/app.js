@@ -1,6 +1,6 @@
 import { Router } from "./router.js";
 import { CATS, icon, describe, distToLine } from "./pois.js";
-import { getWeather, headwind, batteryFactor, beaufort, dirName, bestDeparture } from "./weather.js";
+import { getWeather, headwind, beaufort, dirName, bestDeparture } from "./weather.js";
 import { createFollower } from "./follow.js";
 import { saved } from "./saved.js";
 import { forSpeech, dual, dualText, spokenText } from "./speech.js";
@@ -29,8 +29,8 @@ const PRESETS = [
   { label: "Westwoud & Hem", stops: ["Hoorn", "Westwoud", "Hem"] },
 ];
 const NEAR_ROUTE = 100; // metres: "along the way"
-// Typical speed and advertised range per kind of scootmobiel; the range field can be changed.
-const VEHICLES = { klein: { speed: 6, range: 15 }, middel: { speed: 12, range: 30 }, groot: { speed: 15, range: 40 } };
+// Typical speed per kind of scootmobiel.
+const VEHICLES = { klein: { speed: 6 }, middel: { speed: 12 }, groot: { speed: 15 } };
 const BLOCKED_KEY = "scootmobiel-blocked";
 
 const $ = (id) => document.getElementById(id);
@@ -167,7 +167,6 @@ function ensureLayers() {
   map.addSource("route", { type: "geojson", data: empty() });
   map.addSource("stops", { type: "geojson", data: empty() });
   map.addSource("me", { type: "geojson", data: empty() });
-  map.addSource("turn", { type: "geojson", data: empty() });
   map.addSource("here", { type: "geojson", data: empty() });
   map.addSource("obstacles", { type: "geojson", data: empty() });
   map.addSource("allObstacles", { type: "geojson", data: { type: "FeatureCollection", features: [...router.obsByEdge.values()].flat().map((o) => point([o.lon, o.lat], { label: o.label, hard: o.hard ? 1 : 0 })) } });
@@ -199,8 +198,6 @@ function ensureLayers() {
   map.addLayer({ id: "here-accuracy-line", type: "line", source: "here", paint: { "line-color": "#3b8bd4", "line-opacity": 0.5, "line-width": 1.5 } });
   if (hereData) map.getSource("here").setData(hereData);
   map.addLayer({ id: "me-glow", type: "circle", source: "me", paint: { "circle-radius": 18, "circle-color": "#ffc94d", "circle-opacity": 0.25, "circle-blur": 0.6 } });
-  map.addLayer({ id: "turn", type: "circle", source: "turn", paint: { "circle-radius": 11, "circle-color": "#e5604d", "circle-stroke-color": "#fff", "circle-stroke-width": 3 } });
-  map.addLayer({ id: "turn-label", type: "symbol", source: "turn", layout: { "text-field": ["get", "label"], "text-size": 12, "text-font": ["Noto Sans Bold"], "text-offset": [0, 1.6], "text-anchor": "top", "text-allow-overlap": true }, paint: { "text-color": "#b23a2a", "text-halo-color": "#fff", "text-halo-width": 2 } });
   map.addLayer({ id: "me", type: "circle", source: "me", paint: { "circle-radius": 7, "circle-color": "#0d7a6b", "circle-stroke-color": "#fff", "circle-stroke-width": 2.5 } });
 }
 
@@ -473,29 +470,17 @@ function showResult(route) {
   const km = kmOut * (retour ? 2 : 1);
   const speed = VEHICLES[$("vehicle").value].speed;
   const mins = Math.round((km / speed) * 60);
-  const range = +$("range").value || 30;
-  // Real rides get less than the advertised range; the safe range depends on the battery's age.
-  const usable = range * +$("battery").value;
-
-  // Battery: distance share of the safe range, adjusted for wind and cold when the weather is known.
-  let fOut = 1, fBack = 1, wx = null;
-  if (weather) {
-    const hw = headwind(route.coords, weather);
-    fOut = batteryFactor(hw, weather.temp); fBack = batteryFactor(-hw, weather.temp);
-    wx = { hw, fOut, fBack };
-  }
-  const used = kmOut * fOut + (retour ? kmOut * fBack : 0);
-  const pct = Math.round((used / usable) * 100);
-  drawTurnPoint(route, pct > 100 ? (retour ? usable / (fOut + fBack) : usable / fOut) : null, retour);
+  // Arrival (or back home, for there and back) if you leave now.
+  const arrive = new Date(Date.now() + mins * 60000).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
 
   $("result").hidden = false;
   const distText = km.toFixed(1).replace(".", ",") + " km";
   const timeText = mins >= 60 ? `${Math.floor(mins / 60)} u ${mins % 60} min` : `${mins} min`;
   $("rDist").innerHTML = dualText(distText);
   $("rTime").innerHTML = dualText(timeText);
-  $("rBatt").innerHTML = dualText(pct + "%");
-  $("rBatt").parentElement.classList.toggle("low", pct > 80);
-  $("summaryText").innerHTML = dual(`<b>${esc(distText)}</b> · ${esc(timeText)} · accu ${pct}%`, `${distText}, ${timeText}, accu ${pct}%`);
+  $("rArrive").innerHTML = dualText(arrive);
+  $("rArriveLabel").textContent = retour ? "weer terug" : "aankomst";
+  $("summaryText").innerHTML = dual(`<b>${esc(distText)}</b> · ${esc(timeText)} · aan om ${esc(arrive)}`, `${distText}, ${timeText}, aankomst om ${arrive}`);
 
   const byCls = new Array(router.classes.length).fill(0);
   let unpaved = 0, busy = 0;
@@ -507,24 +492,20 @@ function showResult(route) {
   if (weather) {
     const w = weather;
     const parts = [`Wind ${Math.round(w.wind)} m/s (${beaufort(w.wind)} Bft) uit het ${dirName(w.from)}, ${Math.round(w.temp)} °C.`];
-    const pctOf = (f) => Math.round(Math.abs(f - 1) * 100);
-    if (wx.hw > 1) parts.push(`Heen vooral tegenwind: ca. ${pctOf(wx.fOut)}% meer accu.${retour ? " Terug wind mee." : ""}`);
-    else if (wx.hw < -1) parts.push(`Heen wind mee.${retour ? ` Terug tegenwind: ca. ${pctOf(wx.fBack)}% meer accu.` : " Let op: terug heb je tegenwind."}`);
+    const hw = headwind(route.coords, w);
+    if (hw > 1) parts.push(`Heen vooral tegenwind.${retour ? " Terug wind mee." : ""}`);
+    else if (hw < -1) parts.push(`Heen wind mee.${retour ? " Terug tegenwind." : " Let op: terug heb je tegenwind."}`);
     else parts.push("Wind vooral van opzij.");
-    if (w.temp < 10) parts.push("Een koude accu heeft minder bereik; dat is meegerekend.");
+    if (w.temp < 5) parts.push("Het is koud: kleed je warm aan.");
     if (w.rainChance >= 50) parts.push(`Kans op regen de komende uren: ${w.rainChance}%.`);
-    $("weather").innerHTML = dualText(parts.join(" ") + " (schatting)");
+    $("weather").innerHTML = dualText(parts.join(" "));
     $("weather").hidden = false;
     const best = bestDeparture(route.coords, w, retour);
     $("best").hidden = !best;
-    if (best) $("best").innerHTML = dualText(`Tip: vertrek liever om ${best.time}. Dan kost de wind minder accu${best.rain < best.nowRain ? ` en is de kans op regen kleiner (${best.rain}%)` : ""}.`);
+    if (best) $("best").innerHTML = dualText(`Tip: vertrek liever om ${best.time}. Dan heb je minder last van de wind${best.rain < best.nowRain ? ` en is de kans op regen kleiner (${best.rain}%)` : ""}.`);
   } else { $("weather").hidden = true; $("best").hidden = true; }
 
   const warns = [];
-  if (pct > 100) warns.push(retour
-    ? `Te ver voor één acculading heen en terug (${pct}%). Keer uiterlijk om bij de rode stip op de kaart, of laad onderweg.`
-    : `Te ver voor één acculading (${pct}%). Bij de rode stip op de kaart is je accu waarschijnlijk leeg.`);
-  else if (pct > 80) warns.push(`Krap: de route gebruikt ongeveer ${pct}% van je veilige actieradius.`);
   if (weather && weather.gust > 14) warns.push(`Harde windstoten (${Math.round(weather.gust)} m/s). Rij voorzichtig op de dijk en open stukken.`);
   if (unpaved > 50) warns.push(`${Math.round(unpaved)} m onverhard (gestippeld op de kaart).`);
   if (busy > 100) warns.push(`${Math.round(busy)} m langs of over een drukke weg (rood).`);
@@ -583,22 +564,6 @@ function renderAlong(route) {
   $("along").innerHTML = dualText(parts.length ? `Binnen ${NEAR_ROUTE} m van de route: ${parts.join(", ")}.` : `Geen toiletten of bankjes bekend binnen ${NEAR_ROUTE} m van de route.`);
 }
 
-// Where the battery runs out (one way) or where to turn back (there and back), drawn on the map.
-function drawTurnPoint(route, km, retour) {
-  if (km === null) { map.getSource("turn")?.setData(empty()); return; }
-  const c = route.coords;
-  let d = 0;
-  for (let i = 1; i < c.length; i++) {
-    const m = haversine(c[i - 1], c[i]);
-    if (d + m >= km * 1000) {
-      const f = (km * 1000 - d) / m;
-      const p = [c[i - 1][0] + (c[i][0] - c[i - 1][0]) * f, c[i - 1][1] + (c[i][1] - c[i - 1][1]) * f];
-      map.getSource("turn")?.setData({ type: "FeatureCollection", features: [point(p, { label: retour ? "Keer hier om" : "Accu bijna leeg" })] });
-      return;
-    }
-    d += m;
-  }
-}
 const haversine = (a, b) => {
   const k = Math.PI / 180, x = (b[0] - a[0]) * k * Math.cos(((a[1] + b[1]) / 2) * k), y = (b[1] - a[1]) * k;
   return Math.hypot(x, y) * 6371008.8;
@@ -660,7 +625,7 @@ async function refreshWeather() {
     const changed = !weather || w !== weather;
     weather = w;
     if (changed && lastRoute) showResult(lastRoute);
-  } catch { /* no weather: battery estimate falls back to distance only */ }
+  } catch { /* no weather: the route works the same, just without the wind line */ }
 }
 
 // ---------- toilet on the way ----------
@@ -806,28 +771,14 @@ $("addVia").addEventListener("click", () => {
 $("swap").addEventListener("click", swap);
 function swap() { stops.reverse(); renderStops(); plan(); }
 ["profile", "avoid"].forEach((id) => $(id).addEventListener("change", plan));
-["range", "retour", "battery"].forEach((id) => $(id).addEventListener("input", () => { safeSet(id, id === "retour" ? ($(id).checked ? "1" : "") : $(id).value); updateRangeHint(); if (lastRoute) showResult(lastRoute); }));
-
-// Shows what the manufacturer's range turns into: the distance the battery estimate actually uses.
-function updateRangeHint() {
-  const range = +$("range").value || 30, share = +$("battery").value;
-  const safe = Math.round(range * share);
-  const text = `We rekenen met ongeveer ${safe} km: ${Math.round(share * 100)}% van ${range} km.`;
-  $("rangeHint").innerHTML = dualText(text);
-}
+$("retour").addEventListener("input", () => { safeSet("retour", $("retour").checked ? "1" : ""); if (lastRoute) showResult(lastRoute); });
 $("vehicle").addEventListener("change", () => {
-  const v = VEHICLES[$("vehicle").value];
-  $("range").value = v.range;
-  safeSet("vehicle", $("vehicle").value); safeSet("range", v.range);
-  updateRangeHint();
+  safeSet("vehicle", $("vehicle").value);
   if (lastRoute) showResult(lastRoute);
 });
 // Remember the rider's own scootmobiel between visits.
 if (VEHICLES[safeGet("vehicle")]) $("vehicle").value = safeGet("vehicle");
-if (+safeGet("range") > 0) $("range").value = safeGet("range");
-if (safeGet("battery")) $("battery").value = safeGet("battery");
 $("retour").checked = safeGet("retour") === "1";
-updateRangeHint();
 
 // ---------- start from my location ----------
 $("locate").addEventListener("click", locate);
@@ -893,13 +844,14 @@ function locate() {
 }
 
 // ---------- read the route aloud ----------
+const retourText = () => `${$("rArriveLabel").textContent === "weer terug" ? "Je bent weer terug om" : "Je bent er om"} ${$("rArrive").querySelector("[aria-hidden]")?.textContent || ""}.`;
 $("speak").addEventListener("click", () => {
   const synth = window.speechSynthesis;
   if (!synth) return say("Voorlezen werkt niet in deze browser.");
   if (synth.speaking) { synth.cancel(); $("speak").textContent = "🔊 Voorlezen"; return; }
   // Built from the written-out versions, so "13 min" is read as "13 minuten" and "2,5 km" as "2,5 kilometer".
   const text = [forSpeech(`Route van ${stopLabel(stops[0])} naar ${stopLabel(stops[stops.length - 1])}.`),
-    `${spokenText($("rDist"))}, ongeveer ${spokenText($("rTime"))}. Dat kost ongeveer ${spokenText($("rBatt"))} van je accu.`,
+    `${spokenText($("rDist"))}, ongeveer ${spokenText($("rTime"))}. ${retourText()}`,
     spokenText($("best")), spokenText($("warn")),
     ...[...$("steps").querySelectorAll("li")].map(spokenText)].filter(Boolean).join(" ");
   const u = new SpeechSynthesisUtterance(text);

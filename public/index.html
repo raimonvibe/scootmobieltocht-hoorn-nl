@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Scootmobiel Hoorn</title>
-  <meta name="description" content="Plan een scootmobielroute in Hoorn en de dorpen eromheen: fietspaden, geen trappen, met accu-check." />
+  <meta name="description" content="Plan een scootmobielroute in Hoorn en de dorpen eromheen: fietspaden, geen trappen, met wind- en toiletcheck." />
   <meta name="theme-color" content="#0d7a6b" />
   <link rel="canonical" href="https://raimonvibe.github.io/scootmobieltocht-hoorn-nl/" />
   <!-- Preview when the link is shared on social media and in chat apps (Open Graph / Twitter) -->
@@ -12,7 +12,7 @@
   <meta property="og:locale" content="nl_NL" />
   <meta property="og:site_name" content="Scootmobiel Hoorn" />
   <meta property="og:title" content="Scootmobiel Hoorn: plan je scootmobieltocht" />
-  <meta property="og:description" content="Gratis routeplanner voor scootmobielen in Hoorn en West-Friesland: over fietspaden, zonder trappen, met accu-, wind- en toiletcheck." />
+  <meta property="og:description" content="Gratis routeplanner voor scootmobielen in Hoorn en West-Friesland: over fietspaden, zonder trappen, met wind- en toiletcheck." />
   <meta property="og:url" content="https://raimonvibe.github.io/scootmobieltocht-hoorn-nl/" />
   <meta property="og:image" content="https://raimonvibe.github.io/scootmobieltocht-hoorn-nl/img/delen.jpg" />
   <meta property="og:image:type" content="image/jpeg" />
@@ -21,7 +21,7 @@
   <meta property="og:image:alt" content="Een man op een scootmobiel op een fietspad langs een sloot, met molens en koeien in het West-Friese polderlandschap." />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Scootmobiel Hoorn: plan je scootmobieltocht" />
-  <meta name="twitter:description" content="Gratis routeplanner voor scootmobielen in Hoorn en West-Friesland: over fietspaden, zonder trappen, met accu-, wind- en toiletcheck." />
+  <meta name="twitter:description" content="Gratis routeplanner voor scootmobielen in Hoorn en West-Friesland: over fietspaden, zonder trappen, met wind- en toiletcheck." />
   <meta name="twitter:image" content="https://raimonvibe.github.io/scootmobieltocht-hoorn-nl/img/delen.jpg" />
   <meta name="twitter:image:alt" content="Een man op een scootmobiel op een fietspad langs een sloot, met molens en koeien in het West-Friese polderlandschap." />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -78,7 +78,7 @@
         <div class="stats">
           <div><span id="rDist">–</span><small>afstand</small></div>
           <div><span id="rTime">–</span><small>rijtijd</small></div>
-          <div><span id="rBatt">–</span><small>van je accu</small></div>
+          <div><span id="rArrive">–</span><small id="rArriveLabel">aankomst</small></div>
         </div>
         <div id="mix" class="mix" aria-hidden="true"></div>
         <ul id="mixLegend" class="legend"></ul>
@@ -121,21 +121,7 @@
         <label class="check wide"><input id="retour" type="checkbox" /> Ik rij ook weer terug</label>
         <details class="more wide">
           <summary>Meer instellingen</summary>
-          <div class="grid2">
-            <label>Actieradius volgens de fabrikant (km)
-              <input id="range" type="number" min="5" max="100" step="1" value="30" inputmode="numeric" />
-            </label>
-            <label>Staat van de accu
-              <select id="battery">
-                <option value="0.85">Nieuw (tot 1 jaar)</option>
-                <option value="0.7" selected>Gemiddeld</option>
-                <option value="0.55">Ouder (3+ jaar)</option>
-              </select>
-            </label>
-            <label class="check wide"><input id="avoid" type="checkbox" checked /> Vermijd hekjes, klaphekken en hoge stoepranden</label>
-          </div>
-          <p id="rangeHint" class="hint range-hint" aria-live="polite"></p>
-          <p class="hint">Echte ritten halen vaak minder dan de fabrikant belooft. Daarom rekenen we met een veilige marge, die past bij de staat van je accu. Wind en kou tellen ook mee.</p>
+          <label class="check"><input id="avoid" type="checkbox" checked /> Vermijd hekjes, klaphekken en hoge stoepranden</label>
           <p id="blockedInfo" class="hint" hidden></p>
         </details>
       </fieldset>
@@ -209,9 +195,8 @@
     </section>
 
     <section>
-      <h3><span aria-hidden="true">🔋</span> Je accu</h3>
-      <p>Het percentage laat zien hoeveel van je accu de rit ongeveer kost. Wind, kou en de leeftijd van je accu tellen mee. Stel je eigen scootmobiel in onder <strong>Mijn scootmobiel</strong>.</p>
-      <p>Zie je een <strong>rode stip "Keer hier om"</strong> op de kaart? Dan is de rit te lang voor één acculading. Keer daar om, of zoek onderweg een plek om te laden.</p>
+      <h3><span aria-hidden="true">🌬️</span> Wind en weer</h3>
+      <p>De planner kijkt naar het weer van nu en de komende uren. Je ziet of je tegenwind of wind mee hebt, en of er regen of harde windstoten aankomen. Soms krijg je een tip om iets later te vertrekken.</p>
     </section>
 
     <section>

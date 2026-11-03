@@ -1,7 +1,7 @@
 {
   "name": "Scootmobiel Hoorn",
   "short_name": "Scootmobiel",
-  "description": "Scootmobielroutes in Hoorn en omgeving: fietspaden, geen trappen, met accu- en windcheck.",
+  "description": "Scootmobielroutes in Hoorn en omgeving: fietspaden, geen trappen, met wind- en toiletcheck.",
   "lang": "nl",
   "start_url": "./",
   "scope": "./",
