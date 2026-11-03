@@ -98,10 +98,9 @@
         <h1><svg class="ic teal big" aria-hidden="true" focusable="false"><use href="#i-scooter"/></svg> <span>Scootmobiel <span translate="no">Hoorn</span></span></h1>
         <button type="button" id="helpBtn" class="ghost help-btn" data-i18n-aria="help.aria"><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-help"/></svg><span data-i18n="help.btn"></span></button>
       </div>
-      <p class="sub" data-i18n="sub"></p>
+      <p class="sub" data-i18n-html="sub"></p>
       <div class="pickers">
-        <!-- translate="no": names stay as chosen, even when the browser translates the page. -->
-        <label class="stylepick" translate="no"><span><svg class="ic violet" aria-hidden="true" focusable="false"><use href="#i-palette"/></svg> <span data-i18n="style.label"></span></span>
+        <label class="stylepick"><span><svg class="ic violet" aria-hidden="true" focusable="false"><use href="#i-palette"/></svg> <span data-i18n="style.label"></span></span>
           <select id="style">
             <option value="liberty" data-i18n="style.liberty"></option>
             <option value="bright" data-i18n="style.bright"></option>
@@ -111,14 +110,6 @@
             <option value="liberty2d" data-i18n="style.liberty2d"></option>
           </select>
         </label>
-        <label class="stylepick" translate="no"><span><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-globe"/></svg> <span data-i18n="lang.label"></span></span>
-          <select id="lang">
-            <option value="nl" lang="nl">Nederlands</option>
-            <option value="en" lang="en">English</option>
-            <option value="de" lang="de">Deutsch</option>
-            <option value="uk" lang="uk">Українська</option>
-          </select>
-        </label>
       </div>
       <p id="offline" class="offline" hidden data-i18n="offline"></p>
     </header>
@@ -126,7 +117,7 @@
     <div id="plan" tabindex="-1">
       <fieldset class="stops">
         <legend><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-route"/></svg> <span data-i18n="stops.legend"></span></legend>
-        <div id="stopList" translate="no"></div>
+        <div id="stopList"></div>
         <div class="row">
           <button type="button" id="locate" class="ghost"><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-pin"/></svg> <span class="lbl" data-i18n="locate"></span></button>
           <button type="button" id="addVia" class="ghost"><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-plus"/></svg> <span data-i18n="addVia"></span></button>
@@ -200,14 +191,14 @@
 
       <fieldset>
         <legend><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-compass"/></svg> <span data-i18n="presets.legend"></span></legend>
-        <div id="presets" class="chips" translate="no"></div>
+        <div id="presets" class="chips"></div>
       </fieldset>
 
       <fieldset id="savedBox" hidden>
         <legend><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-star"/></svg> <span data-i18n="saved.legend"></span></legend>
-        <ul id="favList" class="saved" translate="no"></ul>
+        <ul id="favList" class="saved"></ul>
         <p id="recentHead" class="minihead" hidden data-i18n="recent"></p>
-        <ul id="recentList" class="saved" translate="no"></ul>
+        <ul id="recentList" class="saved"></ul>
       </fieldset>
 
       <fieldset>
@@ -220,13 +211,13 @@
     <footer>
       <p class="credits" data-i18n="footer.check"></p>
       <!-- Folded away; the required map credit stays visible in the map corner. -->
-      <details class="sources" translate="no">
+      <details class="sources">
         <summary><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-info"/></svg> <span data-i18n="sources"></span></summary>
         <p data-i18n-html="sources.text" class="credits"></p>
       </details>
       <div class="made">
         <a class="codelink" href="https://github.com/raimonvibe/scootmobieltocht-hoorn-nl" target="_blank" rel="noopener"><svg class="ic white" aria-hidden="true" focusable="false"><use href="#i-code"/></svg> <span data-i18n="code"></span></a>
-        <p><span data-i18n="madeBy"></span> <a href="https://raimonvibe.nl" target="_blank" rel="noopener" translate="no" title="raimonvibe.nl">Stefan</a> · <span id="copyYear" translate="no">© 2026</span></p>
+        <p><span data-i18n="madeBy"></span> <a href="https://raimonvibe.nl" target="_blank" rel="noopener" title="raimonvibe.nl">Stefan</a> · <span id="copyYear" translate="no">© 2026</span></p>
       </div>
     </footer>
   </aside>
@@ -241,7 +232,7 @@
       <button type="button" id="loadingRetry" hidden data-i18n="loading.retry"></button>
     </div>
   </div>
-  <main id="map" data-i18n-aria="map.aria" translate="no"></main>
+  <main id="map" data-i18n-aria="map.aria"></main>
 
   <!-- Place picker: search plus the grouped list of places and neighbourhoods. -->
   <dialog id="picker" class="picker" aria-labelledby="pickerTitle">
@@ -253,7 +244,7 @@
       <input id="pickerInput" type="search" data-i18n-ph="picker.search" autocomplete="off" enterkeyhint="search" aria-controls="pickerList" aria-describedby="pickerCount" />
     </label>
     <p id="pickerCount" class="sr-only" aria-live="polite"></p>
-    <div id="pickerList" class="picker-list" translate="no" lang="nl"></div>
+    <div id="pickerList" class="picker-list"></div>
   </dialog>
 
   <dialog id="help" class="help" aria-labelledby="helpTitle">

@@ -4,7 +4,7 @@ import { getWeather, headwind, beaufort, dirIndex, bestDeparture } from "./weath
 import { createFollower } from "./follow.js";
 import { saved } from "./saved.js";
 import { forSpeech, dual, dualText, spokenText } from "./speech.js";
-import { t, setLang, pickLang, getLang, locale, applyStatic, num, fmtLen, fmtDur, dict } from "./i18n.js";
+import { t, setLang, getLang, locale, applyStatic, num, fmtLen, fmtDur, dict } from "./i18n.js";
 
 const OFM = "https://tiles.openfreemap.org/styles/";
 const STYLES = {
@@ -49,15 +49,31 @@ let toastTimer = 0;
 function say(msg, { long = false, icon = "info", tone = "teal" } = {}) {
   status(msg);
   const t = $("toast");
-  t.innerHTML = ic(icon, tone) + dualText(msg);
+  t.innerHTML = ic(icon, tone) + dual(markNames(esc(msg)), msg);
   t.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => (t.hidden = true), long ? 9000 : 4500);
 }
 $("toast").addEventListener("click", () => ($("toast").hidden = true));
 
-// Language: the reader's choice, else the browser's language, else Dutch.
-setLang(pickLang(safeGet("lang")));
+// Browser translation (Google, Chrome, Safari) would turn Dutch place names into words: "Hoorn" → "Horn",
+// "Nieuwe Steen" → "New Stone". Names are wrapped in translate="no"; everything around them is translated.
+// A space next to a name goes inside the wrapper, because translators sometimes drop it ("ofHoorn").
+let nameRe = null, nameCount = -1;
+const noTr = (html) => `<span translate="no" lang="nl">${html}</span>`;
+function markNames(html) {
+  if (nameCount !== places.length) {
+    const names = [...new Set(["Hoorn", ...places.map((p) => p.name)])].sort((a, b) => b.length - a.length)
+      .map((n) => esc(n).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    nameRe = new RegExp(`(\\s?)(?<![\\p{L}\\p{N}-])(${names.join("|")})(?![\\p{L}\\p{N}-])(\\s?)`, "gu");
+    nameCount = places.length;
+  }
+  return html.replace(nameRe, (_, a, n, b) => noTr(a + n + b));
+}
+
+// A Dutch website. Visitors who want another language use their browser's translation.
+setLang("nl");
+try { localStorage.removeItem("lang"); } catch { /* an older version stored a language choice */ }
 applyStatic();
 
 let router, places = [], pois = [], areas = [], lastRoute = null, activeStop = 0, weather = null, flownIn = false;
@@ -374,12 +390,27 @@ function stopCoord(s) {
   }
   return [s.lon, s.lat];
 }
+// The stop's name as HTML for the page: place and street names protected from browser translation,
+// the words around them ("Fietspad bij …", "Mijn locatie") left translatable.
+function stopLabelHtml(s) {
+  if (s.place) return noTr(esc(s.place));
+  if (s.name === "__me") return esc(t("here.me"));
+  if (s.name && s.name !== placeName(s.lon, s.lat)) return markNames(esc(s.name));
+  const p = placeParts(s.lon, s.lat);
+  if (p.street) return noTr(esc(p.street)) + (p.near && !p.street.includes(p.near) ? `, ${noTr(esc(p.near))}` : "");
+  return p.near ? t(p.area ? "place.in" : "place.near", { kind: esc(p.kind), near: noTr(esc(p.near)) }) : esc(p.kind);
+}
 // "Mijn locatie" is stored as a marker, so it shows in the reader's own language.
 function stopLabel(s) { return s.place || (s.name === "__me" ? t("here.me") : s.name) || placeName(s.lon, s.lat); }
 
 // A readable name for a point on the map, worked out from data the site already has (no lookup service):
 // the street it's on plus the nearest village, e.g. "Grote Oost, Hoorn" or "Fietspad bij Zwaag".
 function placeName(lon, lat) {
+  const p = placeParts(lon, lat);
+  if (p.street) return p.near && !p.street.includes(p.near) ? `${p.street}, ${p.near}` : p.street;
+  return p.near ? t(p.area ? "place.in" : "place.near", { kind: p.kind, near: p.near }) : p.kind;
+}
+function placeParts(lon, lat) {
   const s = router?.snap(lon, lat);
   const street = s && s.d < 60 ? router.names[router.eName[s.e]] : "";
   // Inside a known neighbourhood ("Kersenboogerd-Zuid")? Otherwise the nearest town, village or hamlet.
@@ -395,10 +426,9 @@ function placeName(lon, lat) {
     }
     near = village && village.d < 6000 ? village.name : "";
   }
-  if (street) return near && !street.includes(near) ? `${street}, ${near}` : street;
   // Everyday words instead of the route-type names (fietspad, voetpad, woonstraat, erf/ventweg, …).
   const kind = s ? t(`place${[0, 1, 2, 3, 3, 3, 6][router.eCls[s.e]]}`) : t("placeSpot");
-  return near ? t(area ? "place.in" : "place.near", { kind, near }) : kind;
+  return { street, near, kind, area: !!area };
 }
 const inRing = (pt, r) => {
   let c = false;
@@ -726,7 +756,7 @@ function renderStops() {
     return `<div class="stop${i === activeStop ? " active" : ""}">
       <span class="pin ${start ? "start" : end ? "end" : ""}" aria-hidden="true">${start ? "A" : end ? "B" : i}</span>
       <button type="button" class="stop-pick" data-i="${i}" aria-label="${esc(t("stop.change", { label, value: stopLabel(s) }))}">
-        <small>${label}</small><span lang="nl">${esc(stopLabel(s))}</span>${ic("search")}
+        <small>${label}</small><span>${stopLabelHtml(s)}</span>${ic("search")}
       </button>
       ${!start && !end ? `<button type="button" class="stop-rm" data-rm="${i}" aria-label="${esc(t("stop.remove", { label }))}">${ic("close")}</button>` : "<span></span>"}
     </div>`;
@@ -766,18 +796,18 @@ function renderPicker(q) {
   const order = [...groups.keys()].sort((a, b) => (a === "Hoorn" ? -1 : b === "Hoorn" ? 1 : a.localeCompare(b, "nl")));
   let n = 0;
   // Place names are Dutch (lang="nl"); the small description is in the reader's language.
-  const row = (value, label, sub, icon, tone) => { n++; return `<li><button type="button" data-v="${esc(value)}">${ic(icon, tone)}<span>${esc(label)}${sub ? `<small lang="${getLang()}">${esc(sub)}</small>` : ""}</span></button></li>`; };
-  let html = pickFor === 0 && !f ? `<ul class="pick-group" lang="${getLang()}">${row("__here", t("picker.here"), t("picker.hereSub"), "pin", "sky")}</ul>` : "";
+  const row = (value, label, sub, icon, tone, name = true) => { n++; return `<li><button type="button" data-v="${esc(value)}">${ic(icon, tone)}<span>${name ? noTr(esc(label)) : esc(label)}${sub ? `<small>${esc(sub)}</small>` : ""}</span></button></li>`; };
+  let html = pickFor === 0 && !f ? `<ul class="pick-group">${row("__here", t("picker.here"), t("picker.hereSub"), "pin", "sky", false)}</ul>` : "";
   for (const g of order) {
     const list = groups.get(g);
     const head = list.find((p) => p.name === g);
     const rest = list.filter((p) => p !== head).sort((a, b) => (b.kind === "wijk") - (a.kind === "wijk") || a.name.localeCompare(b.name, "nl"));
-    html += `<h3 class="pick-head">${esc(g)}</h3><ul class="pick-group">`;
+    html += `<h3 class="pick-head">${noTr(esc(g))}</h3><ul class="pick-group">`;
     if (head) html += row(head.name, head.name, rest.length ? t(head.kind === "town" ? "picker.centre" : "picker.village") : "", "pin", "teal");
     for (const p of rest) html += row(p.name, p.name, t(p.kind === "wijk" ? "picker.wijk" : "picker.hamlet"), "pin", p.kind === "wijk" ? "violet" : "sun");
     html += "</ul>";
   }
-  $("pickerList").innerHTML = html || `<p class="pick-none" lang="${getLang()}">${esc(t("picker.none", { q }))}</p>`;
+  $("pickerList").innerHTML = html || `<p class="pick-none">${esc(t("picker.none", { q }))}</p>`;
   $("pickerCount").textContent = f ? t("picker.count", { n }) : "";
 }
 $("pickerInput").addEventListener("input", () => renderPicker($("pickerInput").value));
@@ -804,7 +834,7 @@ function renderPresets() {
   const have = new Set(places.map((p) => p.name));
   const names = dict().presets;
   const usable = PRESETS.map((stops, i) => ({ stops, label: names[i] })).filter((p) => p.stops.every((s) => have.has(s)));
-  $("presets").innerHTML = usable.map((p, i) => `<button type="button" data-p="${i}">${esc(p.label)}</button>`).join("");
+  $("presets").innerHTML = usable.map((p, i) => `<button type="button" data-p="${i}">${markNames(esc(p.label))}</button>`).join("");
   $("presets").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
     stops = usable[+b.dataset.p].stops.map((place) => ({ place }));
     activeStop = 0; renderStops(); plan(); showMapOnPhone();
@@ -872,9 +902,9 @@ function renderSaved() {
   const { fav, recent } = saved.all();
   const others = recent.filter((r) => !fav.some((f) => f.hash === r.hash) && r.hash !== location.hash);
   $("savedBox").hidden = !fav.length && !others.length;
-  $("favList").innerHTML = fav.map((f, i) => `<li><button type="button" class="link" data-h="${esc(f.hash)}">${ic("star", "sun")} ${esc(f.name)}</button><button type="button" class="ghost tiny" data-del="${i}" aria-label="${esc(t("fav.remove", { name: f.name }))}">${ic("close")}</button></li>`).join("");
+  $("favList").innerHTML = fav.map((f, i) => `<li><button type="button" class="link" data-h="${esc(f.hash)}">${ic("star", "sun")} ${markNames(esc(f.name))}</button><button type="button" class="ghost tiny" data-del="${i}" aria-label="${esc(t("fav.remove", { name: f.name }))}">${ic("close")}</button></li>`).join("");
   $("recentHead").hidden = !others.length;
-  $("recentList").innerHTML = others.map((r) => `<li><button type="button" class="link" data-h="${esc(r.hash)}">${esc(r.name)}</button></li>`).join("");
+  $("recentList").innerHTML = others.map((r) => `<li><button type="button" class="link" data-h="${esc(r.hash)}">${markNames(esc(r.name))}</button></li>`).join("");
   $("savedBox").querySelectorAll("[data-h]").forEach((b) => b.addEventListener("click", () => {
     history.replaceState(null, "", b.dataset.h);
     readHash(); activeStop = 0; renderStops(); plan(); showMapOnPhone();
@@ -973,10 +1003,12 @@ function locate() {
 // one female and one male voice (only offered when the device has both); other languages use their default.
 const FEMALE = /ellen|claire|fenna|colette|hanna|lotte|femke|saskia|ilse|anouk|tessa|-tfb|-lfc|-yfr|female|vrouw/i;
 const MALE = /xander|frank|maarten|arnaud|bram|-bmh|-dma|\bmale\b|\bman\b/i;
-function pickVoices() {
+// The page's language right now: "nl", or the language a browser translated it into (it changes <html lang>).
+const pageLang = () => (document.documentElement.lang || "nl").slice(0, 2).toLowerCase();
+function pickVoices(lang = pageLang()) {
   const synth = window.speechSynthesis;
   if (!synth) return {};
-  const all = synth.getVoices().filter((v) => v.lang.replace("_", "-").toLowerCase().startsWith(getLang()));
+  const all = synth.getVoices().filter((v) => v.lang.replace("_", "-").toLowerCase().startsWith(lang));
   const offline = all.filter((v) => v.localService);
   const pool = offline.length ? offline : all;
   const female = pool.find((v) => FEMALE.test(v.name));
@@ -985,13 +1017,15 @@ function pickVoices() {
 }
 function renderVoiceChoice() {
   const { female, male } = pickVoices();
-  const show = getLang() === "nl" && !!female && !!male;
+  const show = pageLang() === "nl" && !!female && !!male;
   $("voiceBox").hidden = !show;
   if (show) document.querySelector(`input[name=voice][value=${safeGet("voice") === "male" ? "male" : "female"}]`).checked = true;
 }
 if (window.speechSynthesis) speechSynthesis.addEventListener?.("voiceschanged", renderVoiceChoice);
 renderVoiceChoice();
 document.querySelectorAll("input[name=voice]").forEach((r) => r.addEventListener("change", () => safeSet("voice", r.value)));
+// When the browser translates the page (or undoes it), the voice choice follows.
+new MutationObserver(renderVoiceChoice).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
 
 const arriveText = () => t($("rArriveLabel").dataset.i18n === "stat.back" ? "speak.back" : "speak.arrive", { time: $("rArrive").querySelector("[aria-hidden]")?.textContent || "" });
 $("speak").addEventListener("click", () => {
@@ -999,14 +1033,19 @@ $("speak").addEventListener("click", () => {
   if (!synth) return say(t("speak.none"));
   if (synth.speaking) { synth.cancel(); setBtn($("speak"), "speaker", "teal", t("speak")); return; }
   // Built from the written-out versions, so "13 min" is read as "13 minuten" and "2,5 km" as "2,5 kilometer".
-  const text = [forSpeech(t("speak.route", { a: stopLabel(stops[0]), b: stopLabel(stops[stops.length - 1]) })),
-    t("speak.time", { dist: spokenText($("rDist")), time: spokenText($("rTime")) }), arriveText(),
-    spokenText($("best")), spokenText($("warn")),
-    ...[...$("steps").querySelectorAll("li")].map(spokenText)].filter(Boolean).join(" ");
+  const translated = pageLang() !== "nl";
+  const steps = [...$("steps").querySelectorAll("li")].map(spokenText);
+  // Dutch: a full sentence-by-sentence text. Translated by the browser: read what is on the page
+  // (already translated), with a voice in that language, so it never sounds like Dutch read in English.
+  const text = (translated
+    ? [spokenText($("summaryText")), spokenText($("gist")), spokenText($("best")), spokenText($("warn")), ...steps]
+    : [forSpeech(t("speak.route", { a: stopLabel(stops[0]), b: stopLabel(stops[stops.length - 1]) })),
+      t("speak.time", { dist: spokenText($("rDist")), time: spokenText($("rTime")) }), arriveText(),
+      spokenText($("best")), spokenText($("warn")), ...steps]).filter(Boolean).join(" ");
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = locale();
+  u.lang = translated ? document.documentElement.lang : locale();
   const { female, male, any } = pickVoices();
-  const voice = (getLang() === "nl" ? (safeGet("voice") === "male" ? male : female) : null) || any;
+  const voice = (!translated ? (safeGet("voice") === "male" ? male : female) : null) || any;
   // A device that hands back an odd voice must never stop the reading: then the language alone decides.
   try { if (voice) u.voice = voice; } catch { /* keep u.lang */ }
   $("speak").dataset.voice = voice?.name || "";
@@ -1078,29 +1117,7 @@ function readHash() {
   $("avoid").checked = h.get("h") !== "0";
 }
 
-// ---------- language ----------
-$("lang").value = getLang();
-$("lang").addEventListener("change", () => {
-  safeSet("lang", $("lang").value);
-  setLang($("lang").value);
-  relabel();
-  say(`${t("lang.label")}: ${$("lang").selectedOptions[0].text}`, { icon: "globe", tone: "sky" });
-});
-// Everything drawn from code (not marked in the HTML) is drawn again in the new language.
-function relabel() {
-  applyStatic();
-  if (router) { showDates(); renderStops(); renderPresets(); renderPoiToggles(); renderSaved(); renderBlockedInfo(); }
-  renderVoiceChoice();
-  setSheet(document.body.dataset.sheet || "half");
-  setBtn($("speak"), "speaker", "teal", t("speak"));
-  setBtn($("follow"), "play", "teal", t("follow"));
-  setBtn($("locate"), "pin", "sky", t("locate"));
-  labelMapControls();
-  if (lastRoute) showResult(lastRoute);
-  if (hereMarker) hereMarker.getElement().querySelector(".here-label").textContent = t("here.label");
-  popup?.remove();
-}
-// MapLibre's buttons were labelled when the map was made; relabel them by hand after a switch.
+// MapLibre's own buttons and the "Hele route" button get their Dutch labels once the map is there.
 function labelMapControls() {
   const set = (sel, key) => document.querySelectorAll(sel).forEach((b) => { b.title = t(key); b.setAttribute("aria-label", t(key)); });
   set(".maplibregl-ctrl-zoom-in", "ctl.zoomIn");
