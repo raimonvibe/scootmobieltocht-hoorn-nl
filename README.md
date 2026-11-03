@@ -1,6 +1,8 @@
-# 🛵 Scootmobiel Hoorn
+# Scootmobiel Hoorn
 
-> **Live:** [raimonvibe.github.io/scootmobieltocht-hoorn-nl](https://raimonvibe.github.io/scootmobieltocht-hoorn-nl/) · Site ontwikkeld door [Stefan](https://raimonvibe.nl)
+![Een scootmobiel op een fietspad langs een sloot, met molens en koeien in het West-Friese polderlandschap](public/img/delen.jpg)
+
+> **Live:** [scootmobieltocht-hoorn-nl.vercel.app](https://scootmobieltocht-hoorn-nl.vercel.app/) · Site ontwikkeld door [Stefan](https://raimonvibe.nl)
 
 Een routeplanner voor scootmobielen in Hoorn en de dorpen eromheen (Zwaag, Blokker, Wognum, Schellinkhout, Wijdenes, Venhuizen, Berkhout, Hem en meer). Het is 100% frontend: **geen backend, geen API-sleutels, geen kosten**.
 

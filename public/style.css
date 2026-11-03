@@ -403,3 +403,19 @@ kbd { font: 700 14px ui-monospace, monospace; border: 1px solid var(--line); bor
   .ic.white { fill: ButtonText; color: ButtonText; }
   button, .stop-pick, .codelink { border: 2px solid ButtonText; }
 }
+
+/* ---------- loading screen ---------- */
+.loading { position: fixed; inset: 0; z-index: 35; display: grid; place-items: center; padding: 24px; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(3px); transition: opacity .4s; }
+.loading.done { opacity: 0; pointer-events: none; }
+.loading-card { width: min(380px, 100%); text-align: center; padding: 26px 22px 22px; border-radius: 22px; background: var(--g-card); border: 1px solid var(--line); box-shadow: 0 16px 40px rgb(0 0 0 / .15); }
+.loading-icon { width: 64px; height: 64px; animation: loading-ride 1.6s ease-in-out infinite alternate; }
+@keyframes loading-ride { from { transform: translateX(-18px); } to { transform: translateX(18px); } }
+#loadingText { font-size: 19px; font-weight: 800; margin: 12px 0 14px; }
+.loading-sub { color: var(--muted); font-size: 15px; margin: 12px 0 0; }
+.loading-bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.loading-bar span { display: block; width: 40%; height: 100%; border-radius: 4px; background: var(--g-accent); animation: loading-slide 1.3s ease-in-out infinite; }
+@keyframes loading-slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+.loading.failed .loading-bar, .loading.failed .loading-sub { display: none; }
+.loading.failed .loading-icon { animation: none; }
+#loadingRetry { margin-top: 16px; width: 100%; background: var(--g-accent); border-color: transparent; }
+@media (prefers-reduced-motion: reduce) { .loading-icon, .loading-bar span { animation: none; } .loading-bar span { width: 100%; opacity: .5; } }

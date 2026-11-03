@@ -9,13 +9,17 @@ export const CATS = {
   scootmobielwinkel: { label: "Scootmobielwinkels", one: "scootmobielwinkel", color: "#5b3fc4", light: "#b693ff", on: true },
 };
 
+// Zoom level from which each kind shows on the map: toilets and scootmobiel shops always,
+// shops and pharmacies once you zoom in, benches only close up. Keeps the overview calm.
+export const MINZOOM = { toilet: 10, scootmobielwinkel: 10, laadpunt: 13.5, supermarkt: 14, apotheek: 14, bankje: 15.5 };
+
 // White pictograms on a 24×24 grid (the same drawings as the page's icon set).
 const GLYPH = {
   toilet: "M8 4.6a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4zm8 0a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4zM6.4 9.2h3.2v5.2H8.9V19H7.1v-4.6h-.7zm8.2 0h2.8l1.8 6h-1.6V19h-1.2v-3.8h-.8V19h-1.2v-3.8h-1.6z",
   supermarkt: "M3 4h2.6l2.2 10.2h9.6L19.6 7H7.3l-.5-2zM9 16.4a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6zm7 0a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6z",
   apotheek: "M9.5 4h5v5.5H20v5h-5.5V20h-5v-5.5H4v-5h5.5z",
   laadpunt: "M13.5 2 5 13.5h5.5L9.5 22 19 9.8h-5.6z",
-  scootmobielwinkel: "M6.2 3.5h2.6c.6 0 1 .4 1 1V11h4.9l2-6.4c.1-.4.5-.6.9-.6h1.9c.6 0 1 .6.8 1.2L17.8 14H6.6A2.6 2.6 0 0 1 4 11.4V5.7c0-1.2 1-2.2 2.2-2.2zM7.2 15.4a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6zm10.2 0a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6z",
+  scootmobielwinkel: "M4.7 3.6c0-.6.5-1.1 1.1-1.1h.8c.6 0 1.1.5 1.1 1.1V9.6h3.5c.7 0 1.2.5 1.2 1.2v.8c0 .7-.5 1.2-1.2 1.2H9.6v1.6h4.2l2.7-8.8h-1.2a.9.9 0 1 1 0-1.8h3.8a.9.9 0 1 1 0 1.8h-.8l-2.7 8.8h2.2c1.3 0 2.4 1.1 2.4 2.4v.6H3.3v-.8c0-1.2 1-2.2 2.2-2.2h2.2v-1.6H5.9c-.7 0-1.2-.5-1.2-1.2zM6.4 16.7a2.7 2.7 0 1 1 0 5.4 2.7 2.7 0 0 1 0-5.4zm11.5 0a2.7 2.7 0 1 1 0 5.4 2.7 2.7 0 0 1 0-5.4z",
   bankje: "M4 9h16v3H4zm1 4h2v6H5zm12 0h2v6h-2zM4 13.5h16v2H4z",
 };
 

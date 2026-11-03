@@ -1,5 +1,5 @@
 import { Router } from "./router.js";
-import { CATS, icon, describe, distToLine } from "./pois.js";
+import { CATS, MINZOOM, icon, describe, distToLine } from "./pois.js";
 import { getWeather, headwind, beaufort, dirName, bestDeparture } from "./weather.js";
 import { createFollower } from "./follow.js";
 import { saved } from "./saved.js";
@@ -143,23 +143,47 @@ const follower = createFollower(map, {
 });
 
 // ---------- data ----------
-Promise.all(["graph", "places", "pois", "areas"].map((f) => fetch(`data/${f}.json`).then((r) => r.json())))
-  .then(([g, p, q, a]) => {
-    router = new Router(g);
-    places = p;
-    pois = q;
-    areas = a;
-    readHash();
-    renderStops();
-    renderPresets();
-    renderPoiToggles();
-    renderSaved();
-    renderBlockedInfo();
-    showDates();
-    status("");
-    whenStyled(() => { ensureLayers(); plan(); });
-  })
-  .catch(() => status("Het wegennet kon niet geladen worden. Controleer je internetverbinding en laad de pagina opnieuw."));
+// A clear loading screen on the first visit (the road network is ~1.3 MB), with a retry if it fails.
+function loadData() {
+  $("loading").hidden = false;
+  $("loadingText").textContent = "De kaart en het wegennet worden geladen…";
+  $("loadingRetry").hidden = true;
+  $("loading").classList.remove("failed");
+  Promise.all(["graph", "places", "pois", "areas"].map((f) => fetch(`data/${f}.json`).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })))
+    .then(([g, p, q, a]) => {
+      router = new Router(g);
+      places = p;
+      pois = q;
+      areas = a;
+      readHash();
+      renderStops();
+      renderPresets();
+      renderPoiToggles();
+      renderSaved();
+      renderBlockedInfo();
+      showDates();
+      status("");
+      whenStyled(() => { ensureLayers(); plan(); hideLoading(); });
+      setTimeout(hideLoading, 8000); // never leave the rider stuck if the map style is slow or offline
+      // Without a map (no WebGL) there's no style to wait for.
+      if (map === noMap) hideLoading();
+    })
+    .catch(() => {
+      status("Het wegennet kon niet geladen worden.");
+      $("loading").classList.add("failed");
+      $("loadingText").textContent = navigator.onLine
+        ? "Het laden is niet gelukt. Probeer het opnieuw."
+        : "Je bent offline. Maak verbinding met internet en probeer het opnieuw.";
+      $("loadingRetry").hidden = false;
+      $("loadingRetry").focus();
+    });
+}
+function hideLoading() {
+  $("loading").classList.add("done");
+  setTimeout(() => ($("loading").hidden = true), reduceMotion ? 0 : 400);
+}
+$("loadingRetry").addEventListener("click", loadData);
+loadData();
 
 function whenStyled(fn) { map.isStyleLoaded() ? fn() : map.once("idle", fn); }
 
@@ -189,7 +213,7 @@ function ensureLayers() {
 
   for (const cat of Object.keys(CATS)) {
     map.addLayer({
-      id: `poi-${cat}`, type: "symbol", source: "pois", filter: ["==", ["get", "c"], cat], minzoom: CATS[cat].small ? 14 : 11,
+      id: `poi-${cat}`, type: "symbol", source: "pois", filter: ["==", ["get", "c"], cat], minzoom: MINZOOM[cat],
       layout: { "icon-image": `poi-${cat}`, "icon-size": CATS[cat].small ? 0.6 : 0.85, "icon-allow-overlap": !CATS[cat].small, "icon-ignore-placement": !CATS[cat].small, visibility: poiOn(cat) ? "visible" : "none" },
     });
   }
@@ -777,12 +801,15 @@ function showPlaces(cat) {
   if (map === noMap) return say(`${all.length} ${c.label.toLowerCase()} bekend in dit gebied.`);
   const b = map.getBounds();
   const inView = all.filter((p) => b.contains([p.lon, p.lat])).length;
+  // Some kinds only show close up: say so, instead of leaving the rider wondering why nothing appears.
+  if (inView && map.getZoom() < MINZOOM[cat]) return say(`${c.label} verschijnen op de kaart als je verder inzoomt (${inView} in dit stuk van de kaart).`, { icon: "search", tone: "teal" });
   if (inView) return say(`${inView} ${inView === 1 ? c.one : c.label.toLowerCase()} in beeld (${all.length} in het hele gebied).`);
   const ctr = map.getCenter();
   const near = all.reduce((x, p) => (haversine([ctr.lng, ctr.lat], [p.lon, p.lat]) < haversine([ctr.lng, ctr.lat], [x.lon, x.lat]) ? p : x));
   const km = haversine([ctr.lng, ctr.lat], [near.lon, near.lat]) / 1000;
   const bb = new maplibregl.LngLatBounds([ctr.lng, ctr.lat], [ctr.lng, ctr.lat]).extend([near.lon, near.lat]);
-  map.fitBounds(bb, { padding: 80, maxZoom: 15, duration: reduceMotion ? 0 : 900 });
+  const cam = map.cameraForBounds(bb, { padding: 80, maxZoom: Math.max(15, MINZOOM[cat] + 0.5) });
+  if (cam) map.easeTo({ ...cam, zoom: Math.max(cam.zoom, MINZOOM[cat] + 0.2), duration: reduceMotion ? 0 : 900 });
   say(`Geen ${c.label.toLowerCase()} in dit stuk van de kaart. De kaart schuift naar de dichtstbijzijnde (${km.toFixed(1).replace(".", ",")} km).`, { long: true });
 }
 
