@@ -47,6 +47,17 @@
         <button type="button" id="helpBtn" class="ghost icon" aria-label="Sneltoetsen en hulp" title="Sneltoetsen (?)">?</button>
       </div>
       <p class="sub">Routes over fietspaden en rustige straten in <span translate="no">Hoorn</span> en omgeving. Zonder trappen, onverhard alleen als het moet.</p>
+      <!-- translate="no": the style names stay Dutch even when the browser translates the page. -->
+      <label class="stylepick" translate="no"><span>🎨 Kaartstijl</span>
+        <select id="style">
+          <option value="liberty">Kleur (3D)</option>
+          <option value="bright">Helder (3D)</option>
+          <option value="positron">Licht (3D)</option>
+          <option value="dark">Donker (3D)</option>
+          <option value="fiord">Fjord, donker (3D)</option>
+          <option value="liberty2d">Kleur (2D, plat)</option>
+        </select>
+      </label>
       <p id="offline" class="offline" hidden>Je bent offline. Opgeslagen kaartdelen en routes werken nog.</p>
     </header>
 
@@ -148,16 +159,6 @@
     <p id="status" class="status" role="status">Kaart en wegennet laden…</p>
 
     <footer>
-      <label>Kaartstijl
-        <select id="style">
-          <option value="liberty">Kleur (3D)</option>
-          <option value="bright">Helder (3D)</option>
-          <option value="positron">Licht (3D)</option>
-          <option value="dark">Donker (3D)</option>
-          <option value="fiord">Fjord, donker (3D)</option>
-          <option value="liberty2d">Kleur (2D, plat)</option>
-        </select>
-      </label>
       <p class="credits">Controleer de route ter plekke; de kaart kan afwijken van de werkelijkheid.</p>
       <!-- Folded away; the required map credit stays visible in the map corner. translate="no" keeps it in
            Dutch and stops browser translation from gluing the names to the surrounding words. -->

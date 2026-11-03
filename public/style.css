@@ -390,3 +390,8 @@ details.sources > summary::-webkit-details-marker { display: none; }
 details.sources > summary { list-style: none; }
 details.sources[open] > summary { color: var(--ink); }
 details.sources .credits { margin-top: 2px; font-size: 12px; }
+
+/* Map style picker at the top of the panel, under the title. */
+.stylepick { flex-direction: row; align-items: center; gap: 10px; margin-top: 10px; color: var(--ink); font-weight: 700; font-size: 14px; }
+.stylepick span { white-space: nowrap; }
+.stylepick select { flex: 1; min-height: 44px; background: color-mix(in srgb, var(--card) 80%, transparent); font-weight: 600; }
