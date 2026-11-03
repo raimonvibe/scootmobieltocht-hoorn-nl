@@ -1,13 +1,14 @@
 // Offline support. The app itself and the route data are cached on install; map tiles, fonts and
 // libraries are kept as you view them. Bump VERSION when you deploy changes to the app files.
-const VERSION = "v4";
+const VERSION = "v5";
 const APP = `app-${VERSION}`;
 const RUNTIME = "runtime";
 const MAX_RUNTIME = 4000; // ~ a few hundred MB at most; old entries are dropped first
 
 const SHELL = [
   "./", "index.html", "style.css", "app.js", "router.js", "pois.js", "weather.js", "follow.js", "saved.js",
-  "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png",
+  "manifest.webmanifest", "favicon.ico", "icons/favicon-32.png", "icons/icon-192.png", "icons/icon-512.png",
+  "icons/maskable-192.png", "icons/maskable-512.png", "icons/apple-touch-icon.png",
   "data/graph.json", "data/places.json", "data/pois.json",
   "https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js",
   "https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css",
