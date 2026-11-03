@@ -25,13 +25,15 @@ export function forSpeech(text) {
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
-// The short form for the eye, the written-out form for the ear (hidden on screen).
-export const dual = (html, plain) => `<span aria-hidden="true">${html}</span><span class="sr-only">${esc(forSpeech(plain))}</span>`;
-export const dualText = (text) => dual(esc(text), text);
+// Text on the page is plain, visible text: browser translators (Google, Chrome, Safari) skip anything
+// marked aria-hidden, so a hidden "for the eye" copy would stay Dutch on a translated page. The written-out
+// form for the read-aloud button is made when reading (spokenText), not stored in the page.
+export const dual = (html) => html;
+export const dualText = (text) => esc(text);
 
-// What an element says out loud: its written-out parts, or else its text made speakable.
-export function spokenText(el) {
+// What an element says out loud. On the Dutch page "13 min" becomes "13 minuten"; on a page the browser
+// translated, the text is read as it stands (it is no longer Dutch).
+export function spokenText(el, translated = false) {
   if (!el || el.hidden) return "";
-  const parts = [...el.querySelectorAll(".sr-only")].map((n) => n.textContent);
-  return parts.length ? parts.join(" ") : forSpeech(el.textContent);
+  return translated ? el.textContent.replace(/\s+/g, " ").trim() : forSpeech(el.textContent);
 }

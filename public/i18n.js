@@ -18,7 +18,7 @@ const D = {
     "summary.empty": "Plan je route",
     "help.btn": "Hulp nodig?", "help.aria": "Hulp: hoe werkt het?",
     sub: 'Routes over fietspaden en rustige straten in<span translate="no" lang="nl"> Hoorn </span>en omgeving. Zonder trappen, onverhard alleen als het moet.',
-    "style.label": "Stijl van de kaart", "style.liberty": "Kleur (3D)", "style.bright": "Heldere kleuren (3D)", "style.positron": "Licht (3D)", "style.dark": "Donker (3D)", "style.fiord": "Fjord, donker (3D)", "style.liberty2d": "Kleur (2D, plat)",
+    "style.label": "Stijl van de landkaart", "style.liberty": "Kleur (3D)", "style.bright": "Heldere kleuren (3D)", "style.positron": "Licht (3D)", "style.dark": "Donker (3D)", "style.fiord": "Fjord, donker (3D)", "style.liberty2d": "Kleur (2D, plat)",
     "lang.label": "Taal",
     offline: "Je bent offline. Routes plannen werkt gewoon. De kaart kan stukken missen; het weer is van je laatste keer online.",
     "stops.legend": "Waar wil je heen?", locate: "Vanaf mijn locatie", locating: "Locatie zoeken…", addVia: "Tussenstop toevoegen", swap: "Route omdraaien", "swap.aria": "Van en naar omwisselen",
@@ -90,7 +90,7 @@ const D = {
     "blocked.done": "Dit stuk wordt voortaan vermeden. Terugzetten kan onder Meer instellingen.",
     // planning and results
     "msg.noPath": "Daar is geen pad in de buurt.", "msg.tooFar": "Een van de punten ligt te ver van een pad.", "msg.noRoute": "Geen route gevonden tussen {a} en {b}.",
-    "status.planned": "Route berekend in {ms} ms, in je eigen browser.",
+    "status.planned": "Route berekend, in je eigen browser.",
     "summary.line": "{dist} · {time} · aankomst {arrive}", "summary.spoken": "{dist}, {time}, aankomst om {arrive}",
     "gist.quiet": "Rustige route: {p}% over fiets- en voetpaden.", "gist.busy": "Deels langs drukkere wegen; {p}% over fiets- en voetpaden.", "gist.mixed": "{p}% over fiets- en voetpaden, de rest over gewone straten.",
     "gist.hard": { one: "{n} lastig obstakel onderweg, zie \"Meer over deze route\".", other: "{n} lastige obstakels onderweg, zie \"Meer over deze route\"." },
@@ -125,10 +125,10 @@ const D = {
     "poi.wheel.yes": "rolstoeltoegankelijk", "poi.wheel.limited": "beperkt rolstoeltoegankelijk", "poi.wheel.no": "niet rolstoeltoegankelijk",
     "poi.free": "gratis", "poi.paid": "betaald", "poi.backrest": "met rugleuning", "poi.noBackrest": "zonder rugleuning", "poi.open": "open: {h}",
     days: ["ma", "di", "wo", "do", "vr", "za", "zo"], "days.ph": "feestdagen", "days.off": "gesloten", "days.247": "dag en nacht",
-    presets: ["Rondrit Hoorn – Zwaag – Blokker", "Dijkroute Schellinkhout – Wijdenes", "Rit naar Berkhout & Scharwoude", "Rit van Hoorn naar Wognum", "Rit langs Westwoud & Hem"],
+    presets: ["Rondrit Hoorn – Zwaag – Blokker", "Dijkroute Schellinkhout – Wijdenes", "Rit naar Berkhout & Scharwoude", "Rit Hoorn – Wognum", "Rit langs Westwoud & Hem"],
     // units, for the screen and for speech
-    "u.km": "km", "u.m": "m", "u.h": "u", "u.min": "min", "u.ms": "m/s",
-    speech: [["km/u", "kilometer per uur"], ["m/s", "meter per seconde"], ["km", "kilometer"], ["m", "meter"], ["u", "uur"], ["min", "minuten"], ["°C", "graden"]],
+    "u.km": "km", "u.m": "m", "u.h": "uur", "u.min": "min", "u.ms": "m/s",
+    speech: [["km/u", "kilometer per uur"], ["m/s", "meter per seconde"], ["km", "kilometer"], ["m", "meter"], ["min", "minuten"], ["°C", "graden"]],
     "sp.oneMin": "1 minuut", "sp.bft": "windkracht {n}", "sp.about": "ongeveer", "sp.percent": "procent", "sp.to": "naar",
   }
 

@@ -37,7 +37,8 @@ const BLOCKED_KEY = "scootmobiel-blocked";
 
 const $ = (id) => document.getElementById(id);
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const status = (msg) => ($("status").textContent = msg);
+// The status line is only rewritten when its text really changes (a rewrite undoes a browser translation).
+const status = (msg) => { const el = $("status"); if (el.__src !== msg) { el.__src = msg; el.textContent = msg; } };
 // Icons from the inline sprite in index.html (colour gradients; decorative, so hidden from screen readers).
 const ic = (name, cls = "") => `<svg class="ic${cls ? " " + cls : ""}" aria-hidden="true" focusable="false"><use href="#i-${name}"/></svg>`;
 // Write HTML only when it differs from what this code last wrote there. Redrawing the same text would
@@ -562,8 +563,9 @@ function showResult(route) {
   put($("rDist"), dualText(distText));
   put($("rTime"), dualText(timeText));
   put($("rArrive"), dualText(arrive));
-  put($("rArriveLabel"), esc(t(retour ? "stat.back" : "stat.arrive")));
-  $("rArriveLabel").dataset.i18n = retour ? "stat.back" : "stat.arrive";
+  // Only when it changes: the label was already filled (and maybe translated) from the HTML.
+  const arriveKey = retour ? "stat.back" : "stat.arrive";
+  if ($("rArriveLabel").dataset.i18n !== arriveKey) { $("rArriveLabel").dataset.i18n = arriveKey; $("rArriveLabel").textContent = t(arriveKey); }
   requestAnimationFrame(measurePeek);
   put($("summaryText"), dual(t("summary.line", { dist: `<b>${esc(distText)}</b>`, time: esc(timeText), arrive: esc(arrive) }), t("summary.spoken", { dist: distText, time: timeText, arrive })));
 
@@ -1034,21 +1036,23 @@ document.querySelectorAll("input[name=voice]").forEach((r) => r.addEventListener
 // When the browser translates the page (or undoes it), the voice choice follows.
 new MutationObserver(renderVoiceChoice).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
 
-const arriveText = () => t($("rArriveLabel").dataset.i18n === "stat.back" ? "speak.back" : "speak.arrive", { time: $("rArrive").querySelector("[aria-hidden]")?.textContent || "" });
+const arriveText = () => t($("rArriveLabel").dataset.i18n === "stat.back" ? "speak.back" : "speak.arrive", { time: $("rArrive").textContent.trim() });
 $("speak").addEventListener("click", () => {
   const synth = window.speechSynthesis;
   if (!synth) return say(t("speak.none"));
   if (synth.speaking) { synth.cancel(); setBtn($("speak"), "speaker", "teal", t("speak")); return; }
   // Built from the written-out versions, so "13 min" is read as "13 minuten" and "2,5 km" as "2,5 kilometer".
   const translated = pageLang() !== "nl";
-  const steps = [...$("steps").querySelectorAll("li")].map(spokenText);
+  const steps = [...$("steps").querySelectorAll("li")].map((li) => spokenText(li, translated));
   // Dutch: a full sentence-by-sentence text. Translated by the browser: read what is on the page
   // (already translated), with a voice in that language, so it never sounds like Dutch read in English.
   const text = (translated
-    ? [spokenText($("summaryText")), spokenText($("gist")), spokenText($("best")), spokenText($("warn")), ...steps]
+    ? [spokenText($("summaryText"), true), spokenText($("gist"), true), spokenText($("best"), true), spokenText($("warn"), true), ...steps]
     : [forSpeech(t("speak.route", { a: stopLabel(stops[0]), b: stopLabel(stops[stops.length - 1]) })),
       t("speak.time", { dist: spokenText($("rDist")), time: spokenText($("rTime")) }), arriveText(),
-      spokenText($("best")), spokenText($("warn")), ...steps]).filter(Boolean).join(" ");
+      spokenText($("best")), spokenText($("warn")), ...steps])
+    // Each part ends with a full stop, so the voice pauses between the steps.
+    .filter(Boolean).map((p) => (/[.!?]$/.test(p) ? p : `${p}.`)).join(" ");
   const u = new SpeechSynthesisUtterance(text);
   u.lang = translated ? document.documentElement.lang : locale();
   const { female, male, any } = pickVoices();
