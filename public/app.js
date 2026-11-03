@@ -236,7 +236,7 @@ map.on("click", (ev) => {
   if (hit) return showPopup(hit);
   const s = router.snap(ev.lngLat.lng, ev.lngLat.lat);
   if (!s) return say("Daar is geen pad in de buurt.");
-  stops[activeStop] = { lon: +s.point[0].toFixed(5), lat: +s.point[1].toFixed(5) };
+  stops[activeStop] = { lon: +s.point[0].toFixed(5), lat: +s.point[1].toFixed(5), name: placeName(s.point[0], s.point[1]) };
   // Next click fills the next stop; the last one keeps moving the destination.
   activeStop = Math.min(activeStop + 1, stops.length - 1);
   renderStops();
@@ -323,7 +323,25 @@ function stopCoord(s) {
   }
   return [s.lon, s.lat];
 }
-function stopLabel(s) { return s.place || s.name || `Punt op kaart (${s.lat.toFixed(4)}, ${s.lon.toFixed(4)})`; }
+function stopLabel(s) { return s.place || s.name || placeName(s.lon, s.lat); }
+
+// A readable name for a point on the map, worked out from data the site already has (no lookup service):
+// the street it's on plus the nearest village, e.g. "Grote Oost, Hoorn" or "Fietspad bij Zwaag".
+function placeName(lon, lat) {
+  const s = router?.snap(lon, lat);
+  const street = s && s.d < 60 ? router.names[router.eName[s.e]] : "";
+  let village = null;
+  for (const p of places) {
+    // Hamlets only when you're practically in them; otherwise the nearest town or village.
+    const d = haversine([lon, lat], [p.lon, p.lat]) * (p.kind === "hamlet" ? 3 : 1);
+    if (!village || d < village.d) village = { name: p.name, d };
+  }
+  const near = village && village.d < 6000 ? village.name : "";
+  if (street) return near && !street.includes(near) ? `${street}, ${near}` : street;
+  // Everyday words instead of the route-type names (fietspad, voetpad, woonstraat, erf/ventweg, …).
+  const kind = s ? ["Fietspad", "Voetpad", "Straat", "Weg", "Weg", "Weg", "Landweg"][router.eCls[s.e]] : "Plek";
+  return near ? `${kind} bij ${near}` : kind;
+}
 
 function plan() {
   if (!router) return;
@@ -612,7 +630,7 @@ function addToilet() {
   stops.splice(leg + 1, 0, { lon: best.p.lon, lat: best.p.lat, name });
   renderStops();
   plan();
-  say(`🚻 Tussenstop toegevoegd: ${name}, ${Math.round(best.d)} m van je route. Het nummer op de kaart wijst het aan.`, { long: true });
+  say(`🚻 Tussenstop toegevoegd: ${name}, ${Math.round(best.d)} m van je route. Je ziet het op de kaart als extra stop.`, { long: true });
   showMapOnPhone();
 }
 
