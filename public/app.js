@@ -40,6 +40,13 @@ const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const status = (msg) => ($("status").textContent = msg);
 // Icons from the inline sprite in index.html (colour gradients; decorative, so hidden from screen readers).
 const ic = (name, cls = "") => `<svg class="ic${cls ? " " + cls : ""}" aria-hidden="true" focusable="false"><use href="#i-${name}"/></svg>`;
+// Write HTML only when it differs from what this code last wrote there. Redrawing the same text would
+// throw away a browser translation (Google/Chrome replace the text nodes); unchanged text keeps it.
+function put(el, html) {
+  if (!el || el.__src === html) return;
+  el.__src = html;
+  el.innerHTML = html;
+}
 // Set a button's icon and label in one go (keeps the icon when the text changes).
 function setBtn(btn, icon, cls, label) { btn.innerHTML = `${ic(icon, cls)} <span class="lbl">${esc(label)}</span>`; }
 const phone = matchMedia("(max-width: 760px)");
@@ -552,19 +559,19 @@ function showResult(route) {
   $("result").hidden = false;
   const distText = `${num(km)} ${t("u.km")}`;
   const timeText = fmtDur(mins);
-  $("rDist").innerHTML = dualText(distText);
-  $("rTime").innerHTML = dualText(timeText);
-  $("rArrive").innerHTML = dualText(arrive);
-  $("rArriveLabel").textContent = t(retour ? "stat.back" : "stat.arrive");
+  put($("rDist"), dualText(distText));
+  put($("rTime"), dualText(timeText));
+  put($("rArrive"), dualText(arrive));
+  put($("rArriveLabel"), esc(t(retour ? "stat.back" : "stat.arrive")));
   $("rArriveLabel").dataset.i18n = retour ? "stat.back" : "stat.arrive";
   requestAnimationFrame(measurePeek);
-  $("summaryText").innerHTML = dual(t("summary.line", { dist: `<b>${esc(distText)}</b>`, time: esc(timeText), arrive: esc(arrive) }), t("summary.spoken", { dist: distText, time: timeText, arrive }));
+  put($("summaryText"), dual(t("summary.line", { dist: `<b>${esc(distText)}</b>`, time: esc(timeText), arrive: esc(arrive) }), t("summary.spoken", { dist: distText, time: timeText, arrive })));
 
   const byCls = new Array(router.classes.length).fill(0);
   let unpaved = 0, busy = 0;
   for (const p of route.pieces) { byCls[p.cls] += p.len; if (p.flags & 1) unpaved += p.len; if (p.cls === 5) busy += p.len; }
-  $("mix").innerHTML = byCls.map((m, c) => (m ? `<span style="flex:${m};background:${CLASS_COLORS[c]}"></span>` : "")).join("");
-  $("mixLegend").innerHTML = byCls.map((m, c) => (m / route.len > 0.01 ? `<li><i style="background:${CLASS_COLORS[c]}"></i>${t(`cls${c}`)} ${Math.round((m / route.len) * 100)}%</li>` : "")).join("");
+  put($("mix"), byCls.map((m, c) => (m ? `<span style="flex:${m};background:${CLASS_COLORS[c]}"></span>` : "")).join(""));
+  put($("mixLegend"), byCls.map((m, c) => (m / route.len > 0.01 ? `<li><i style="background:${CLASS_COLORS[c]}"></i>${t(`cls${c}`)} ${Math.round((m / route.len) * 100)}%</li>` : "")).join(""));
 
   // Weather line.
   if (weather) {
@@ -578,11 +585,11 @@ function showResult(route) {
     if (w.rainChance >= 50) parts.push(t("wx.rain", { p: w.rainChance }));
     // Offline: the forecast kept from the last time online, and when that was.
     if (w.savedAt) parts.push(t("wx.saved", { time: new Date(w.savedAt).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }) }));
-    $("weather").innerHTML = ic("wind", "sky") + dualText(parts.join(" "));
+    put($("weather"), ic("wind", "sky") + dualText(parts.join(" ")));
     $("weather").hidden = false;
     const best = bestDeparture(route.coords, w, retour);
     $("best").hidden = !best;
-    if (best) $("best").innerHTML = ic("clock", "sun") + dualText(best.rain < best.nowRain ? t("wx.bestRain", { time: best.time, p: best.rain }) : t("wx.best", { time: best.time }));
+    if (best) put($("best"), ic("clock", "sun") + dualText(best.rain < best.nowRain ? t("wx.bestRain", { time: best.time, p: best.rain }) : t("wx.best", { time: best.time })));
   } else { $("weather").hidden = true; $("best").hidden = true; }
 
   const warns = [];
@@ -590,7 +597,7 @@ function showResult(route) {
   if (unpaved > 50) warns.push(t("warn.unpaved", { m: fmtLen(unpaved) }));
   if (busy > 100) warns.push(t("warn.busy", { m: fmtLen(busy) }));
   $("warn").hidden = !warns.length;
-  $("warn").innerHTML = ic("alert", "sun") + dualText(warns.join(" "));
+  put($("warn"), ic("alert", "sun") + dualText(warns.join(" ")));
   renderGist(route, byCls, busy);
 
   renderObstacles(route);
@@ -612,7 +619,7 @@ function renderGist(route, byCls, busy) {
     text += hw > 1 ? ` ${t("gist.headwind")}` : hw < -1 ? ` ${t("gist.tailwind")}` : "";
     if (weather.rainChance >= 50) text += ` ${t("gist.rain")}`;
   }
-  $("gist").innerHTML = ic(hard ? "alert" : "check", hard ? "sun" : "teal") + dualText(text);
+  put($("gist"), ic(hard ? "alert" : "check", hard ? "sun" : "teal") + dualText(text));
 }
 
 function renderObstacles(route) {
@@ -657,7 +664,7 @@ function renderAlong(route) {
     return n ? t(`along.${cat}`, { n }) : null;
   }).filter(Boolean);
   $("along").hidden = false;
-  $("along").innerHTML = ic("pin", "violet") + dualText(parts.length ? t("along.some", { m: fmtLen(NEAR_ROUTE), list: parts.join(", ") }) : t("along.none", { m: fmtLen(NEAR_ROUTE) }));
+  put($("along"), ic("pin", "violet") + dualText(parts.length ? t("along.some", { m: fmtLen(NEAR_ROUTE), list: parts.join(", ") }) : t("along.none", { m: fmtLen(NEAR_ROUTE) })));
 }
 
 const haversine = (a, b) => {
@@ -692,7 +699,7 @@ function renderSteps(route) {
     if (last && (s.name ? last.name === s.name : !last.name && last.cls === s.cls)) { last.len += s.len; last.coords.push(...s.coords); }
     else merged.push(s);
   }
-  $("steps").innerHTML = merged.map((s, i) => {
+  put($("steps"), merged.map((s, i) => {
     const turn = i ? turnWord(merged[i - 1].coords, s.coords) : t("step.start");
     const kind = t(`cls${s.cls}`);
     const mark = i ? landmarkAt(s.coords[0]) : null;
@@ -701,7 +708,7 @@ function renderSteps(route) {
     const html = t(s.name ? "step.via" : "step.over", { turn: turnHtml, where: s.name ? `<strong translate="no" lang="nl">${esc(s.name)}</strong>` : kind }) + ` <small>(${fmtLen(s.len)}, ${kind})</small>`;
     const plain = t(s.name ? "step.via" : "step.over", { turn: turnPlain, where: s.name || kind }) + `, ${fmtLen(s.len)}, ${kind}.`;
     return `<li>${dual(html, plain)}</li>`;
-  }).join("") + `<li>${dual(t("step.arrive", { place: `<span translate="no" lang="nl">${esc(stopLabel(stops[stops.length - 1]))}</span>` }), t("step.arrive", { place: stopLabel(stops[stops.length - 1]) }) + ".")}</li>`;
+  }).join("") + `<li>${dual(t("step.arrive", { place: `<span translate="no" lang="nl">${esc(stopLabel(stops[stops.length - 1]))}</span>` }), t("step.arrive", { place: stopLabel(stops[stops.length - 1]) }) + ".")}</li>`);
 }
 
 function turnWord(prev, next) {
@@ -834,7 +841,7 @@ function renderPresets() {
   const have = new Set(places.map((p) => p.name));
   const names = dict().presets;
   const usable = PRESETS.map((stops, i) => ({ stops, label: names[i] })).filter((p) => p.stops.every((s) => have.has(s)));
-  $("presets").innerHTML = usable.map((p, i) => `<button type="button" data-p="${i}">${markNames(esc(p.label))}</button>`).join("");
+  $("presets").innerHTML = usable.map((p, i) => `<button type="button" data-p="${i}"><span class="lbl">${markNames(esc(p.label))}</span></button>`).join("");
   $("presets").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
     stops = usable[+b.dataset.p].stops.map((place) => ({ place }));
     activeStop = 0; renderStops(); plan(); showMapOnPhone();
@@ -902,9 +909,9 @@ function renderSaved() {
   const { fav, recent } = saved.all();
   const others = recent.filter((r) => !fav.some((f) => f.hash === r.hash) && r.hash !== location.hash);
   $("savedBox").hidden = !fav.length && !others.length;
-  $("favList").innerHTML = fav.map((f, i) => `<li><button type="button" class="link" data-h="${esc(f.hash)}">${ic("star", "sun")} ${markNames(esc(f.name))}</button><button type="button" class="ghost tiny" data-del="${i}" aria-label="${esc(t("fav.remove", { name: f.name }))}">${ic("close")}</button></li>`).join("");
+  $("favList").innerHTML = fav.map((f, i) => `<li><button type="button" class="link" data-h="${esc(f.hash)}">${ic("star", "sun")} <span class="lbl">${markNames(esc(f.name))}</span></button><button type="button" class="ghost tiny" data-del="${i}" aria-label="${esc(t("fav.remove", { name: f.name }))}">${ic("close")}</button></li>`).join("");
   $("recentHead").hidden = !others.length;
-  $("recentList").innerHTML = others.map((r) => `<li><button type="button" class="link" data-h="${esc(r.hash)}">${markNames(esc(r.name))}</button></li>`).join("");
+  $("recentList").innerHTML = others.map((r) => `<li><button type="button" class="link" data-h="${esc(r.hash)}"><span class="lbl">${markNames(esc(r.name))}</span></button></li>`).join("");
   $("savedBox").querySelectorAll("[data-h]").forEach((b) => b.addEventListener("click", () => {
     history.replaceState(null, "", b.dataset.h);
     readHash(); activeStop = 0; renderStops(); plan(); showMapOnPhone();

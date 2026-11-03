@@ -1,6 +1,6 @@
 // Offline support. The app itself and the route data are cached on install; map tiles, fonts and
 // libraries are kept as you view them. Bump VERSION when you deploy changes to the app files.
-const VERSION = "v27";
+const VERSION = "v28";
 const APP = `app-${VERSION}`;
 const RUNTIME = "runtime";
 const MAX_RUNTIME = 4000; // ~ a few hundred MB at most; old entries are dropped first
