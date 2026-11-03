@@ -195,7 +195,10 @@ function loadData() {
       showDates();
       status("");
       refreshWeather(); // also fetched (and kept for the road) before a route is planned
-      whenStyled(() => { ensureLayers(); plan(); hideLoading(); });
+      // The route (and all its text) right away, without waiting for the map: a page translated by the
+      // Google Translate website only translates what is there early on. The map draws it once it's ready.
+      plan();
+      whenStyled(() => { ensureLayers(); if (lastRoute) drawRoute(lastRoute); drawStops(); hideLoading(); });
       setTimeout(hideLoading, 8000); // never leave the rider stuck if the map style is slow or offline
       // Without a map (no WebGL) there's no style to wait for.
       if (map === noMap) hideLoading();
@@ -475,7 +478,7 @@ function plan() {
     obstacles: legs.flatMap((l) => l.obstacles),
   };
   lastRoute = route;
-  ensureLayers();
+  if (map.isStyleLoaded()) ensureLayers(); // otherwise the map adds the layers when its style is ready
   drawRoute(route);
   showResult(route);
   status(t("status.planned", { ms: Math.round(performance.now() - t0) }));
