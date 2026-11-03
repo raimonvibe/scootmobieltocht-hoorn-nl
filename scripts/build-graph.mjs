@@ -163,17 +163,156 @@ for (const w of ways.values()) {
   }
 }
 
+// Keep only the largest connected network. Bits cut off at the edge of the downloaded area (or private
+// islands) would otherwise "catch" a tap or a village and leave the rider with no route at all.
+const root = Array.from({ length: verts.length / 2 }, (_, i) => i);
+const find = (x) => { while (root[x] !== x) x = root[x] = root[root[x]]; return x; };
+for (const [a, b] of edges) root[find(a)] = find(b);
+const size = new Map();
+for (let v = 0; v < root.length; v++) size.set(find(v), (size.get(find(v)) || 0) + 1);
+const mainRoot = [...size.entries()].sort((x, y) => y[1] - x[1])[0][0];
+const newIndex = new Int32Array(root.length).fill(-1);
+const keptVerts = [];
+for (let v = 0; v < root.length; v++) if (find(v) === mainRoot) { newIndex[v] = keptVerts.length / 2; keptVerts.push(verts[2 * v], verts[2 * v + 1]); }
+const newEdge = new Int32Array(edges.length).fill(-1);
+const keptEdges = [];
+edges.forEach((e, i) => { if (newIndex[e[0]] >= 0) { newEdge[i] = keptEdges.length; keptEdges.push([newIndex[e[0]], newIndex[e[1]], ...e.slice(2)]); } });
+console.log(`connected network: ${keptVerts.length / 2} of ${verts.length / 2} vertices kept`);
+
 // Obstacles at a junction vertex can be counted twice (once per way); keep one.
 const seenObs = new Set();
-const uniqueObs = obstacles.filter((o) => { const k = o[0] + "," + o[1]; if (seenObs.has(k)) return false; seenObs.add(k); return true; });
-writeFileSync(`${OUT}/graph.json`, JSON.stringify({ built: new Date().toISOString().slice(0, 10), classes: CLASSES, names, verts, edges, obstacleKinds: OBSTACLES, obstacles: uniqueObs }));
+const uniqueObs = obstacles
+  .filter((o) => newEdge[o[3]] >= 0)
+  .map((o) => [o[0], o[1], o[2], newEdge[o[3]]])
+  .filter((o) => { const k = o[0] + "," + o[1]; if (seenObs.has(k)) return false; seenObs.add(k); return true; });
+writeFileSync(`${OUT}/graph.json`, JSON.stringify({ built: new Date().toISOString().slice(0, 10), classes: CLASSES, names, verts: keptVerts, edges: keptEdges, obstacleKinds: OBSTACLES, obstacles: uniqueObs }));
 
-// Towns and villages for the pickers.
+// Distance (m) from a point to the nearest point of the kept network, to drop places it doesn't reach.
+const toNetwork = (lon, lat) => {
+  let best = Infinity;
+  for (let i = 0; i < keptVerts.length; i += 2) {
+    const dx = (keptVerts[i] / 1e5 - lon) * 67500, dy = (keptVerts[i + 1] / 1e5 - lat) * 111320;
+    const d = dx * dx + dy * dy;
+    if (d < best) best = d;
+  }
+  return Math.sqrt(best);
+};
+
+// Towns and villages for the pickers, each with a `group`: the town or village it belongs to.
+// Neighbourhoods come from CBS (wijken en buurten); hamlets are placed under their village.
 const places = JSON.parse(readFileSync(`${RAW}/places.json`, "utf8"))
   .elements.filter((e) => e.tags?.name)
-  .map((e) => ({ name: e.tags.name, kind: e.tags.place, lon: +e.lon.toFixed(5), lat: +e.lat.toFixed(5) }))
-  .sort((a, b) => a.name.localeCompare(b.name, "nl"));
+  .map((e) => ({ name: e.tags.name, kind: e.tags.place, lon: +e.lon.toFixed(5), lat: +e.lat.toFixed(5) }));
+
+// --- small geometry helpers (lon/lat, fine at this scale) ---
+const ringArea = (r) => { let a = 0; for (let i = 0, j = r.length - 1; i < r.length; j = i++) a += (r[j][0] + r[i][0]) * (r[j][1] - r[i][1]); return a / 2; };
+const polys = (g) => (g.type === "Polygon" ? [g.coordinates] : g.coordinates);
+const inRing = (pt, r) => { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { if ((r[i][1] > pt[1]) !== (r[j][1] > pt[1]) && pt[0] < ((r[j][0] - r[i][0]) * (pt[1] - r[i][1])) / (r[j][1] - r[i][1]) + r[i][0]) c = !c; } return c; };
+const inGeom = (pt, g) => polys(g).some((p) => inRing(pt, p[0]) && !p.slice(1).some((h) => inRing(pt, h)));
+function labelPoint(g) {
+  // Centroid of the largest part; if that falls outside (odd shapes), the outline point nearest to it.
+  const outer = polys(g).map((p) => p[0]).sort((a, b) => Math.abs(ringArea(b)) - Math.abs(ringArea(a)))[0];
+  let cx = 0, cy = 0, a = 0;
+  for (let i = 0, j = outer.length - 1; i < outer.length; j = i++) {
+    const f = outer[j][0] * outer[i][1] - outer[i][0] * outer[j][1];
+    cx += (outer[j][0] + outer[i][0]) * f; cy += (outer[j][1] + outer[i][1]) * f; a += f;
+  }
+  let pt = [cx / (3 * a), cy / (3 * a)];
+  if (!inGeom(pt, g)) pt = outer.reduce((b, q) => (Math.hypot(q[0] - pt[0], q[1] - pt[1]) < Math.hypot(b[0] - pt[0], b[1] - pt[1]) ? q : b));
+  return pt;
+}
+function simplify(ring, tol) { // Douglas–Peucker, tolerance in degrees
+  if (ring.length < 4) return ring;
+  const keep = new Uint8Array(ring.length); keep[0] = keep[ring.length - 1] = 1;
+  const stack = [[0, ring.length - 1]];
+  while (stack.length) {
+    const [s, e] = stack.pop(); let md = 0, mi = -1;
+    for (let i = s + 1; i < e; i++) {
+      const [x, y] = ring[i], [x1, y1] = ring[s], [x2, y2] = ring[e];
+      const d = Math.abs((y2 - y1) * x - (x2 - x1) * y + x2 * y1 - y2 * x1) / (Math.hypot(x2 - x1, y2 - y1) || 1);
+      if (d > md) { md = d; mi = i; }
+    }
+    if (md > tol) { keep[mi] = 1; stack.push([s, mi], [mi, e]); }
+  }
+  return ring.filter((_, i) => keep[i]).map(([x, y]) => [+x.toFixed(5), +y.toFixed(5)]);
+}
+
+const MAIN = places.filter((p) => p.kind === "town" || p.kind === "village");
+const mainNames = new Set(MAIN.map((p) => p.name));
+const nearestMain = ([lon, lat]) => MAIN.reduce((b, p) => (Math.hypot((p.lon - lon) * 0.61, p.lat - lat) < Math.hypot((b.lon - lon) * 0.61, b.lat - lat) ? p : b)).name;
+const stripWijk = (n) => n.replace(/^Wijk \d+\s+/, "");
+// Within the municipality of Hoorn, Zwaag and Blokker are villages of their own; the rest is the town.
+const hoornGroup = (wijk) => (["Zwaag", "Blokker"].includes(wijk) ? wijk : "Hoorn");
+
+let wijken = [], buurten = [];
+try {
+  wijken = JSON.parse(readFileSync(`${RAW}/cbs-wijken.json`, "utf8")).features.filter((f) => f.properties.water !== "JA");
+  buurten = JSON.parse(readFileSync(`${RAW}/cbs-buurten.json`, "utf8")).features.filter((f) => f.properties.water !== "JA");
+} catch { console.warn("no data/raw/cbs-*.json — building without neighbourhoods"); }
+const wijkByCode = new Map(wijken.map((f) => [f.properties.wijkcode, f.properties]));
+const groupOfWijk = (p, pt) => {
+  const w = stripWijk(p.wijknaam);
+  if (p.gemeentenaam === "Hoorn") return hoornGroup(w);
+  return mainNames.has(w) ? w : nearestMain(pt);
+};
+
+// Every town/village is its own group; hamlets join the village whose CBS area they lie in.
+for (const p of places) {
+  if (mainNames.has(p.name)) { p.group = p.name; continue; }
+  const w = wijken.find((f) => inGeom([p.lon, p.lat], f.geometry));
+  p.group = w ? groupOfWijk(w.properties, [p.lon, p.lat]) : nearestMain([p.lon, p.lat]);
+}
+
+// Neighbourhoods worth choosing: Hoorn's residential wijken, and named buurten in the villages.
+// Left out: "Centrum", "Buitengebied", "Verspreide huizen", business parks, numbered buurten, and names
+// that are just the village or an existing hamlet.
+const SKIP = /buitengebied|verspreide huizen|bedrijventerrein|ondernemend|centrum|omgeving|buiten\b|buurt \d|\bkern\b|gedeeltelijk|ten westen|^(noord|oost|zuid|west)$/i;
+const areas = [];
+const taken = new Set(places.map((p) => p.name.toLowerCase()));
+function addArea(name, group, geometry) {
+  if (SKIP.test(name) || taken.has(name.toLowerCase())) return;
+  taken.add(name.toLowerCase());
+  const [lon, lat] = labelPoint(geometry);
+  places.push({ name, kind: "wijk", group, lon: +lon.toFixed(5), lat: +lat.toFixed(5) });
+  areas.push({ name, group, rings: polys(geometry).map((p) => simplify(p[0], 0.00012)) });
+}
+for (const f of wijken) {
+  const p = f.properties;
+  if (p.gemeentenaam !== "Hoorn" || hoornGroup(stripWijk(p.wijknaam)) !== "Hoorn") continue;
+  // "Wijk 36 Noord" is better known by its only buurt, Zevenhuis.
+  const name = stripWijk(p.wijknaam) === "Noord" ? "Zevenhuis" : stripWijk(p.wijknaam).replace("Venenlaan-kwartier", "Venenlaankwartier");
+  addArea(name, "Hoorn", f.geometry);
+}
+for (const f of buurten) {
+  const p = f.properties;
+  if (p.gemeentenaam === "Hoorn" || p.gemeentenaam === "Purmerend") continue; // Purmerend: only a sliver of the Beemster
+  const w = wijkByCode.get(p.wijkcode);
+  if (!w) continue;
+  const pt = labelPoint(f.geometry);
+  // A buurt in a CBS wijk that isn't a village we know (e.g. "Stede Broec Zuid" → Lutjebroek) is a village itself.
+  if (!mainNames.has(stripWijk(w.wijknaam)) && !SKIP.test(p.buurtnaam) && !taken.has(p.buurtnaam.toLowerCase()) && !/\s/.test(p.buurtnaam)) {
+    taken.add(p.buurtnaam.toLowerCase());
+    places.push({ name: p.buurtnaam, kind: "village", group: p.buurtnaam, lon: +pt[0].toFixed(5), lat: +pt[1].toFixed(5) });
+    continue;
+  }
+  const group = groupOfWijk(w, pt);
+  // "Wognum Kreeklanden" → "Kreeklanden", "Drieban Wijdenes" → "Drieban"; "Centrum Venhuizen" is skipped above.
+  const name = p.buurtnaam.replace(new RegExp(`^${group}\\s+|\\s+${group}$`, "i"), "").trim();
+  if (name.toLowerCase() === group.toLowerCase()) continue;
+  addArea(name, group, f.geometry);
+}
+
+// A place you can't reach over the network (at the edge of the area) isn't offered at all.
+const unreachable = places.filter((p) => toNetwork(p.lon, p.lat) > 600);
+if (unreachable.length) console.log(`left out, not on the connected network: ${unreachable.map((p) => p.name).join(", ")}`);
+for (const p of unreachable) places.splice(places.indexOf(p), 1);
+places.sort((a, b) => a.name.localeCompare(b.name, "nl"));
 writeFileSync(`${OUT}/places.json`, JSON.stringify(places));
+// Outlines of those neighbourhoods, so a tapped point can be named "… in Kersenboogerd-Zuid".
+writeFileSync(`${OUT}/areas.json`, JSON.stringify(areas));
+const perGroup = {};
+for (const p of places) if (p.kind === "wijk" || p.kind === "hamlet") (perGroup[p.group] = perGroup[p.group] || []).push(p.name);
+for (const [g, l] of Object.entries(perGroup).sort()) console.log(`  ${g}: ${l.join(", ")}`);
 
 // Places along the way: accessible toilets, benches, charging, pharmacies, shops.
 let pois = [];

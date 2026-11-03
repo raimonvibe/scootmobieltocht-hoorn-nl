@@ -3,6 +3,7 @@ import { CATS, icon, describe, distToLine } from "./pois.js";
 import { getWeather, headwind, batteryFactor, beaufort, dirName, bestDeparture } from "./weather.js";
 import { createFollower } from "./follow.js";
 import { saved } from "./saved.js";
+import { forSpeech, dual, dualText, spokenText } from "./speech.js";
 
 const OFM = "https://tiles.openfreemap.org/styles/";
 const STYLES = {
@@ -41,14 +42,14 @@ let toastTimer = 0;
 function say(msg, { long = false } = {}) {
   status(msg);
   const t = $("toast");
-  t.textContent = msg;
+  t.innerHTML = dualText(msg);
   t.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => (t.hidden = true), long ? 9000 : 4500);
 }
 $("toast").addEventListener("click", () => ($("toast").hidden = true));
 
-let router, places = [], pois = [], lastRoute = null, activeStop = 0, weather = null, flownIn = false;
+let router, places = [], pois = [], areas = [], lastRoute = null, activeStop = 0, weather = null, flownIn = false;
 // A stop is { place } (a village name) or { lon, lat, name? } (a clicked point or a place on the map).
 let stops = [{ place: "Hoorn" }, { place: "Zwaag" }];
 
@@ -137,11 +138,12 @@ const follower = createFollower(map, {
 });
 
 // ---------- data ----------
-Promise.all(["graph", "places", "pois"].map((f) => fetch(`data/${f}.json`).then((r) => r.json())))
-  .then(([g, p, q]) => {
+Promise.all(["graph", "places", "pois", "areas"].map((f) => fetch(`data/${f}.json`).then((r) => r.json())))
+  .then(([g, p, q, a]) => {
     router = new Router(g);
     places = p;
     pois = q;
+    areas = a;
     readHash();
     renderStops();
     renderPresets();
@@ -343,17 +345,50 @@ function stopLabel(s) { return s.place || s.name || placeName(s.lon, s.lat); }
 function placeName(lon, lat) {
   const s = router?.snap(lon, lat);
   const street = s && s.d < 60 ? router.names[router.eName[s.e]] : "";
-  let village = null;
-  for (const p of places) {
-    // Hamlets only when you're practically in them; otherwise the nearest town or village.
-    const d = haversine([lon, lat], [p.lon, p.lat]) * (p.kind === "hamlet" ? 3 : 1);
-    if (!village || d < village.d) village = { name: p.name, d };
+  // Inside a known neighbourhood ("Kersenboogerd-Zuid")? Otherwise the nearest town, village or hamlet.
+  const area = areas.find((ar) => ar.rings.some((r) => inRing([lon, lat], r)));
+  let near = area?.name || "";
+  if (!near) {
+    let village = null;
+    for (const p of places) {
+      if (p.kind === "wijk") continue;
+      // Hamlets only when you're practically in them; otherwise the nearest town or village.
+      const d = haversine([lon, lat], [p.lon, p.lat]) * (p.kind === "hamlet" ? 3 : 1);
+      if (!village || d < village.d) village = { name: p.name, d };
+    }
+    near = village && village.d < 6000 ? village.name : "";
   }
-  const near = village && village.d < 6000 ? village.name : "";
   if (street) return near && !street.includes(near) ? `${street}, ${near}` : street;
   // Everyday words instead of the route-type names (fietspad, voetpad, woonstraat, erf/ventweg, …).
   const kind = s ? ["Fietspad", "Voetpad", "Straat", "Weg", "Weg", "Weg", "Landweg"][router.eCls[s.e]] : "Plek";
-  return near ? `${kind} bij ${near}` : kind;
+  return near ? `${kind} ${area ? "in" : "bij"} ${near}` : kind;
+}
+const inRing = (pt, r) => {
+  let c = false;
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+    if ((r[i][1] > pt[1]) !== (r[j][1] > pt[1]) && pt[0] < ((r[j][0] - r[i][0]) * (pt[1] - r[i][1])) / (r[j][1] - r[i][1]) + r[i][0]) c = !c;
+  }
+  return c;
+};
+
+// The place picker: one list, grouped per town or village (Hoorn first), with its neighbourhoods
+// and hamlets underneath. Native <optgroup>s read well on phones and with a screen reader.
+function placeOptions() {
+  const groups = new Map();
+  for (const p of places) {
+    if (!groups.has(p.group)) groups.set(p.group, []);
+    groups.get(p.group).push(p);
+  }
+  const order = [...groups.keys()].sort((a, b) => (a === "Hoorn" ? -1 : b === "Hoorn" ? 1 : a.localeCompare(b, "nl")));
+  return order.map((g) => {
+    const list = groups.get(g);
+    const head = list.find((p) => p.name === g);
+    // Neighbourhoods first, then hamlets, each alphabetical.
+    const rest = list.filter((p) => p !== head).sort((a, b) => (b.kind === "wijk") - (a.kind === "wijk") || a.name.localeCompare(b.name, "nl"));
+    const opt = (p, label) => `<option value="${esc(p.name)}">${esc(label)}</option>`;
+    const headLabel = head && rest.length ? `${g} (${head.kind === "town" ? "centrum" : "dorp"})` : g;
+    return `<optgroup label="${esc(g)}">${head ? opt(head, headLabel) : ""}${rest.map((p) => opt(p, p.name)).join("")}</optgroup>`;
+  }).join("");
 }
 
 function plan() {
@@ -454,11 +489,13 @@ function showResult(route) {
   drawTurnPoint(route, pct > 100 ? (retour ? usable / (fOut + fBack) : usable / fOut) : null, retour);
 
   $("result").hidden = false;
-  $("rDist").textContent = km.toFixed(1).replace(".", ",") + " km";
-  $("rTime").textContent = mins >= 60 ? `${Math.floor(mins / 60)} u ${mins % 60} min` : `${mins} min`;
-  $("rBatt").textContent = pct + "%";
+  const distText = km.toFixed(1).replace(".", ",") + " km";
+  const timeText = mins >= 60 ? `${Math.floor(mins / 60)} u ${mins % 60} min` : `${mins} min`;
+  $("rDist").innerHTML = dualText(distText);
+  $("rTime").innerHTML = dualText(timeText);
+  $("rBatt").innerHTML = dualText(pct + "%");
   $("rBatt").parentElement.classList.toggle("low", pct > 80);
-  $("summaryText").innerHTML = `<b>${esc($("rDist").textContent)}</b> · ${esc($("rTime").textContent)} · accu ${pct}%`;
+  $("summaryText").innerHTML = dual(`<b>${esc(distText)}</b> · ${esc(timeText)} · accu ${pct}%`, `${distText}, ${timeText}, accu ${pct}%`);
 
   const byCls = new Array(router.classes.length).fill(0);
   let unpaved = 0, busy = 0;
@@ -476,11 +513,11 @@ function showResult(route) {
     else parts.push("Wind vooral van opzij.");
     if (w.temp < 10) parts.push("Een koude accu heeft minder bereik; dat is meegerekend.");
     if (w.rainChance >= 50) parts.push(`Kans op regen de komende uren: ${w.rainChance}%.`);
-    $("weather").textContent = parts.join(" ") + " (schatting)";
+    $("weather").innerHTML = dualText(parts.join(" ") + " (schatting)");
     $("weather").hidden = false;
     const best = bestDeparture(route.coords, w, retour);
     $("best").hidden = !best;
-    if (best) $("best").textContent = `Tip: vertrek liever om ${best.time}. Dan kost de wind minder accu${best.rain < best.nowRain ? ` en is de kans op regen kleiner (${best.rain}%)` : ""}.`;
+    if (best) $("best").innerHTML = dualText(`Tip: vertrek liever om ${best.time}. Dan kost de wind minder accu${best.rain < best.nowRain ? ` en is de kans op regen kleiner (${best.rain}%)` : ""}.`);
   } else { $("weather").hidden = true; $("best").hidden = true; }
 
   const warns = [];
@@ -492,7 +529,7 @@ function showResult(route) {
   if (unpaved > 50) warns.push(`${Math.round(unpaved)} m onverhard (gestippeld op de kaart).`);
   if (busy > 100) warns.push(`${Math.round(busy)} m langs of over een drukke weg (rood).`);
   $("warn").hidden = !warns.length;
-  $("warn").textContent = warns.join(" ");
+  $("warn").innerHTML = dualText(warns.join(" "));
 
   renderObstacles(route);
   renderAlong(route);
@@ -512,7 +549,7 @@ function renderObstacles(route) {
   for (const o of obs) counts[o.label] = (counts[o.label] || 0) + 1;
   const hard = obs.filter((o) => o.hard);
   const list = Object.entries(counts).map(([l, n]) => `${n}× ${l}`).join(", ");
-  let html = `<p><strong>Obstakels op de route:</strong> ${esc(list)}.</p>`;
+  let html = `<p>${dual(`<strong>Obstakels op de route:</strong> ${esc(list)}.`, `Obstakels op de route: ${list}.`)}</p>`;
   if (hard.length) {
     html += `<p>${hard.length} daarvan ${hard.length === 1 ? "is" : "zijn"} vaak lastig voor een scootmobiel (rood). ${$("avoid").checked ? "Er is geen route zonder." : 'Zet "Vermijd hekjes" aan voor een route eromheen.'}</p>`;
     html += `<div class="row">${hard.slice(0, 6).map((o, i) => `<button type="button" class="ghost small" data-o="${i}">Toon ${esc(o.label)}</button>`).join("")}</div>`;
@@ -543,7 +580,7 @@ function renderAlong(route) {
     return n ? `${n} ${n === 1 ? one : many}` : null;
   }).filter(Boolean);
   $("along").hidden = false;
-  $("along").textContent = parts.length ? `Binnen ${NEAR_ROUTE} m van de route: ${parts.join(", ")}.` : `Geen toiletten of bankjes bekend binnen ${NEAR_ROUTE} m van de route.`;
+  $("along").innerHTML = dualText(parts.length ? `Binnen ${NEAR_ROUTE} m van de route: ${parts.join(", ")}.` : `Geen toiletten of bankjes bekend binnen ${NEAR_ROUTE} m van de route.`);
 }
 
 // Where the battery runs out (one way) or where to turn back (there and back), drawn on the map.
@@ -598,8 +635,10 @@ function renderSteps(route) {
     const turn = i ? turnWord(merged[i - 1].coords, s.coords) : "Vertrek";
     const where = s.name ? `<strong translate="no">${esc(s.name)}</strong>` : router.classes[s.cls];
     const mark = i ? landmarkAt(s.coords[0]) : null;
-    return `<li>${turn}${mark ? ` bij <span translate="no">${esc(mark)}</span>` : ""} ${s.name ? "via" : "over"} ${where} <small>(${fmtLen(s.len)}, ${router.classes[s.cls]})</small></li>`;
-  }).join("") + `<li>Aangekomen bij <span translate="no">${esc(stopLabel(stops[stops.length - 1]))}</span></li>`;
+    const html = `${turn}${mark ? ` bij <span translate="no">${esc(mark)}</span>` : ""} ${s.name ? "via" : "over"} ${where} <small>(${fmtLen(s.len)}, ${router.classes[s.cls]})</small>`;
+    const plain = `${turn}${mark ? ` bij ${mark}` : ""} ${s.name ? "via" : "over"} ${s.name || router.classes[s.cls]}, ${fmtLen(s.len)}, ${router.classes[s.cls]}.`;
+    return `<li>${dual(html, plain)}</li>`;
+  }).join("") + `<li>${dual(`Aangekomen bij <span translate="no">${esc(stopLabel(stops[stops.length - 1]))}</span>`, `Aangekomen bij ${stopLabel(stops[stops.length - 1])}.`)}</li>`;
 }
 
 function turnWord(prev, next) {
@@ -649,7 +688,7 @@ function addToilet() {
 
 // ---------- stops UI ----------
 function renderStops() {
-  const opts = places.map((p) => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join("");
+  const opts = placeOptions();
   $("stopList").innerHTML = stops.map((s, i) => {
     const start = i === 0, end = i === stops.length - 1;
     const label = start ? "Van" : end ? "Naar" : `Tussenstop ${i}`;
@@ -848,10 +887,11 @@ $("speak").addEventListener("click", () => {
   const synth = window.speechSynthesis;
   if (!synth) return say("Voorlezen werkt niet in deze browser.");
   if (synth.speaking) { synth.cancel(); $("speak").textContent = "🔊 Voorlezen"; return; }
-  const text = [`Route van ${stopLabel(stops[0])} naar ${stopLabel(stops[stops.length - 1])}.`,
-    `${$("rDist").textContent.replace(",", " komma ")}, ongeveer ${$("rTime").textContent.replace(" u ", " uur ")}.`,
-    $("best").hidden ? "" : $("best").textContent, $("warn").hidden ? "" : $("warn").textContent,
-    ...[...$("steps").querySelectorAll("li")].map((li) => li.textContent.replace(/\(([^)]*)\)/, ", $1."))].filter(Boolean).join(" ");
+  // Built from the written-out versions, so "13 min" is read as "13 minuten" and "2,5 km" as "2,5 kilometer".
+  const text = [forSpeech(`Route van ${stopLabel(stops[0])} naar ${stopLabel(stops[stops.length - 1])}.`),
+    `${spokenText($("rDist"))}, ongeveer ${spokenText($("rTime"))}. Dat kost ongeveer ${spokenText($("rBatt"))} van je accu.`,
+    spokenText($("best")), spokenText($("warn")),
+    ...[...$("steps").querySelectorAll("li")].map(spokenText)].filter(Boolean).join(" ");
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "nl-NL";
   u.rate = 0.95;

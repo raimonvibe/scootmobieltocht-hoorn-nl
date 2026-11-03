@@ -29,3 +29,10 @@ BBOX="52.58,4.96,52.73,5.20"
 q "[out:json][timeout:170];(node[barrier]($BBOX);node[kerb]($BBOX););out body qt;" data/raw/barriers.json
 q "[out:json][timeout:170];(nwr[amenity~'^(toilets|bench|pharmacy|charging_station)$']($BBOX);nwr[shop~'^(supermarket|mobility_scooter|medical_supply)$']($BBOX););out center tags qt;" data/raw/pois.json
 ls -lh data/raw
+
+# Official neighbourhoods (wijken en buurten) from CBS, via PDOK (free, no key).
+PDOK="https://service.pdok.nl/cbs/wijkenbuurten/2025/wfs/v1_0"
+for L in wijken buurten; do
+  curl -sS --fail -m 180 "$PDOK?service=WFS&version=2.0.0&request=GetFeature&typeNames=wijkenbuurten:$L&outputFormat=application/json&srsName=EPSG:4326&bbox=52.58,4.96,52.73,5.20,urn:ogc:def:crs:EPSG::4326&count=1000" -o "data/raw/cbs-$L.json"
+done
+ls -lh data/raw

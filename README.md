@@ -27,6 +27,8 @@ Gebouwd naar het voorbeeld van [amsterdam-metro-v2](https://github.com/raimonvib
 - 🛵 **Mijn scootmobiel**: kies klein, middel of groot; snelheid en actieradius passen zich aan en worden onthouden
 - 🔋 **Eerlijke accu**: echte ritten halen vaak minder dan de fabrikant belooft, dus rekenen we met een veilige marge die past bij de staat van je accu. Wordt het te ver, dan toont de kaart waar je moet omkeren
 - ⏰ **Beste vertrektijd**: kijkt naar de wind en de kans op regen in de komende uren, bij daglicht
+- 🏘️ **Wijken en buurten**: één keuzelijst, gegroepeerd per plaats, met bijvoorbeeld Kersenboogerd, Risdam en Grote Waal onder Hoorn, en Kreeklanden en Bloesemgaerde onder Wognum (officiële CBS-indeling via PDOK)
+- 🗣️ **Goed voor te lezen**: op het scherm korte eenheden ("13 min", "2,5 km"); de voorleesknop en schermlezers krijgen een onzichtbare, uitgeschreven versie ("13 minuten", "2,5 kilometer")
 - 📍 **Vanaf mijn locatie** starten, en een **routebeschrijving met herkenningspunten** ("bij de supermarkt") die je kunt laten **voorlezen**
 - 🚫 **Leert van jou**: kon je ergens niet langs? Tik op de route, kies "Vermijd dit stuk", en de planner gaat er voortaan omheen. Of meld het direct op OpenStreetMap
 - 📱 **Werkt op elk scherm**: op de telefoon een kaart op volle grootte met tabbladen "Kaart" en "Planner" en een routesamenvatting boven de kaart; op tablet en computer een zijpaneel
@@ -71,8 +73,8 @@ Verhoog `VERSION` in `public/sw.js` als je de app-bestanden verandert. Dan halen
 Het wegennet komt uit OpenStreetMap en staat als statisch bestand in `public/data/`. Verversen doe je af en toe, op je eigen computer:
 
 ```bash
-./scripts/fetch-osm.sh          # downloadt het gebied via Overpass (kan even duren)
-node scripts/build-graph.mjs    # bouwt public/data/graph.json, places.json en pois.json
+./scripts/fetch-osm.sh          # downloadt het gebied via Overpass en de CBS-wijken via PDOK (kan even duren)
+node scripts/build-graph.mjs    # bouwt public/data/graph.json, places.json, pois.json en areas.json
 ```
 
 Wil je een groter gebied? Pas de tegels in `fetch-osm.sh` en `maxBounds` in `public/app.js` aan.
