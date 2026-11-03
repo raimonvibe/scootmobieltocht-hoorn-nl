@@ -4,13 +4,18 @@ import { getWeather, headwind, batteryFactor, beaufort, dirName, bestDeparture }
 import { createFollower } from "./follow.js";
 import { saved } from "./saved.js";
 
+const OFM = "https://tiles.openfreemap.org/styles/";
 const STYLES = {
-  liberty: "https://tiles.openfreemap.org/styles/liberty",
-  bright: "https://tiles.openfreemap.org/styles/bright",
-  positron: "https://tiles.openfreemap.org/styles/positron",
-  dark: "https://tiles.openfreemap.org/styles/dark",
-  fiord: "https://tiles.openfreemap.org/styles/fiord",
+  liberty: OFM + "liberty",
+  liberty2d: OFM + "liberty", // same map, flat: for older or slower devices
+  bright: OFM + "bright",
+  positron: OFM + "positron",
+  dark: OFM + "dark",
+  fiord: OFM + "fiord",
 };
+// Building colour per style for the 3D buildings this site adds (only Liberty has its own).
+const BUILDING_3D = { bright: "#e8dfd1", positron: "#e2e2e0", dark: "#323840", fiord: "#41566b" };
+const is3D = (v) => v !== "liberty2d";
 const DARK_STYLES = new Set(["dark", "fiord"]);
 // Same colours as --c0…--c6 in style.css.
 const CLASS_COLORS = ["#1f9e6e", "#7cc576", "#3b8bd4", "#8a9bb0", "#f2a33a", "#e0523f", "#9b7b55"];
@@ -116,7 +121,7 @@ try {
 
 const follower = createFollower(map, {
   reduceMotion,
-  pitch: () => ($("style").value === "liberty" ? 60 : 30),
+  pitch: () => (is3D($("style").value) ? 60 : 30),
   onEnd: () => ($("follow").textContent = "▶ Volg route"),
 });
 
@@ -190,8 +195,31 @@ map.on("styleimagemissing", (e) => {
   if (CATS[cat]) map.addImage(e.id, icon(cat), { pixelRatio: 2 });
 });
 
+// 3D buildings in every style: Liberty has them; for the others they're added from the same
+// OpenMapTiles "building" data, below the labels. "Kleur (2D)" hides them for a flat map.
+function apply3D(v) {
+  const layers = map.getStyle()?.layers || [];
+  for (const l of layers) {
+    if (l.type === "fill-extrusion") map.setLayoutProperty(l.id, "visibility", is3D(v) ? "visible" : "none");
+  }
+  if (!is3D(v) || layers.some((l) => l.type === "fill-extrusion") || !BUILDING_3D[v]) return;
+  const firstLabel = layers.find((l) => l.type === "symbol")?.id;
+  map.addLayer({
+    id: "buildings-3d", type: "fill-extrusion", source: "openmaptiles", "source-layer": "building", minzoom: 13,
+    filter: ["!=", ["get", "hide_3d"], true],
+    paint: {
+      "fill-extrusion-color": BUILDING_3D[v],
+      "fill-extrusion-height": ["interpolate", ["linear"], ["zoom"], 13, 0, 14.5, ["coalesce", ["get", "render_height"], 5]],
+      "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
+      "fill-extrusion-opacity": 0.85,
+      "fill-extrusion-vertical-gradient": true,
+    },
+  }, firstLabel);
+}
+
 // After a style switch: re-add our layers once the new style is completely loaded.
 map.on("style.load", () => {
+  apply3D($("style").value);
   if (router && !map.getSource("route")) { ensureLayers(); if (lastRoute) drawRoute(lastRoute); drawStops(); }
 });
 
@@ -361,7 +389,7 @@ function fit(coords) {
   if (!flownIn && !reduceMotion) {
     // First route of the visit: a slow, tilted fly-in.
     flownIn = true;
-    map.fitBounds(b, { padding, maxZoom: 15.5, duration: 3200, pitch: $("style").value === "liberty" ? 50 : 0, bearing: -12, essential: false });
+    map.fitBounds(b, { padding, maxZoom: 15.5, duration: 3200, pitch: is3D($("style").value) ? 50 : 0, bearing: -12, essential: false });
     return;
   }
   flownIn = true;
@@ -792,7 +820,7 @@ function setStyle(v) {
   applyTheme(v);
   stopFollow();
   map.setStyle(STYLES[v], { diff: false }); // full reload, so "style.load" fires and our layers come back
-  map.easeTo({ pitch: v === "liberty" ? 45 : 0, duration: reduceMotion ? 0 : 600 });
+  map.easeTo({ pitch: is3D(v) ? 45 : 0, duration: reduceMotion ? 0 : 600 });
 }
 function applyTheme(v) { document.documentElement.dataset.theme = DARK_STYLES.has(v) ? "dark" : "light"; }
 

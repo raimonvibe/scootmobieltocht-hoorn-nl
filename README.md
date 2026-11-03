@@ -30,7 +30,7 @@ Gebouwd naar het voorbeeld van [amsterdam-metro-v2](https://github.com/raimonvib
 - 📍 **Vanaf mijn locatie** starten, en een **routebeschrijving met herkenningspunten** ("bij de supermarkt") die je kunt laten **voorlezen**
 - 🚫 **Leert van jou**: kon je ergens niet langs? Tik op de route, kies "Vermijd dit stuk", en de planner gaat er voortaan omheen. Of meld het direct op OpenStreetMap
 - 📱 **Werkt op elk scherm**: op de telefoon een kaart op volle grootte met tabbladen "Kaart" en "Planner" en een routesamenvatting boven de kaart; op tablet en computer een zijpaneel
-- 🎬 Een **fly-in** bij het openen en **vijf kaartstijlen** (Kleur 3D, Helder, Licht, Donker, Fjord)
+- 🎬 Een **fly-in** bij het openen en **kaartstijlen in 3D** (Kleur, Helder, Licht, Donker, Fjord), plus **Kleur (2D)** als platte terugval voor oudere of tragere apparaten
 
 ## Delen op social media
 
