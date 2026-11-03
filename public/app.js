@@ -461,16 +461,22 @@ function fit(coords) {
   coords.forEach((c) => b.extend(c));
   // On a phone, keep the route clear of the message at the top and the sheet at the bottom.
   const sheetTop = phone.matches ? $("panel").getBoundingClientRect().top : innerHeight;
-  const padding = phone.matches ? { top: 64, bottom: Math.max(40, innerHeight - sheetTop + 16), left: 24, right: 56 } : 40;
-  // Close enough that the 3D buildings show straight away (they appear from zoom 12.5).
+  // Right side: room for the zoom buttons, so the route's end never hides under them.
+  const padding = phone.matches ? { top: 56, bottom: Math.max(32, innerHeight - sheetTop + 8), left: 16, right: 56 } : { top: 40, bottom: 40, left: 40, right: 80 };
+  const bearing = flownIn ? map.getBearing() : -12;
+  const cam = map.cameraForBounds(b, { padding, bearing, maxZoom: 17 });
+  if (!cam) return;
+  // A bit closer than an exact fit: the route fills the view and the 3D buildings show.
+  const zoom = Math.min(17, cam.zoom + 0.25);
+  const pitch = is3D($("style").value) ? (phone.matches ? 45 : 55) : 0;
   if (!flownIn && !reduceMotion) {
     // First route of the visit: a slow, tilted fly-in.
     flownIn = true;
-    map.fitBounds(b, { padding, maxZoom: 16.5, duration: 3200, pitch: is3D($("style").value) ? 55 : 0, bearing: -12, essential: false });
+    map.flyTo({ center: cam.center, zoom, pitch, bearing, duration: 3200, essential: false });
     return;
   }
   flownIn = true;
-  map.fitBounds(b, { padding, duration: reduceMotion ? 0 : 900, maxZoom: 16.5 });
+  map.easeTo({ center: cam.center, zoom, duration: reduceMotion ? 0 : 900 });
 }
 
 // ---------- result panel ----------
@@ -494,6 +500,7 @@ function showResult(route) {
   $("rTime").innerHTML = dualText(timeText);
   $("rArrive").innerHTML = dualText(arrive);
   $("rArriveLabel").textContent = retour ? "weer terug" : "aankomst";
+  requestAnimationFrame(measurePeek);
   $("summaryText").innerHTML = dual(`<b>${esc(distText)}</b> · ${esc(timeText)} · aan om ${esc(arrive)}`, `${distText}, ${timeText}, aankomst om ${arrive}`);
 
   const byCls = new Array(router.classes.length).fill(0);
@@ -1062,7 +1069,14 @@ document.addEventListener("keydown", (e) => {
 // Three sizes: "peek" (just the route in short), "half" (map and planner together) and "full".
 // Sizing works with the arrow buttons, by tapping the grab bar, or by swiping it (WCAG 2.5.7: no drag needed).
 const SHEET = ["peek", "half", "full"];
+// The small "peek" size fits the bar exactly, also when large text makes the summary wrap.
+function measurePeek() {
+  const bar = $("panel").querySelector(".sheet-bar");
+  if (bar.offsetHeight) document.documentElement.style.setProperty("--peek-bar", `${Math.ceil(bar.offsetHeight)}px`);
+}
+addEventListener("resize", measurePeek);
 function setSheet(state) {
+  measurePeek();
   document.body.dataset.sheet = state;
   const i = SHEET.indexOf(state);
   $("sheetLess").disabled = i === 0;
