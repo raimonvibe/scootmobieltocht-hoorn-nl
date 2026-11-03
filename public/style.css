@@ -381,3 +381,12 @@ details.more .grid2 { margin-top: 6px; }
   .here-label { font-size: 14px; padding: 6px 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .here-pulse { animation: none; transform: scale(2); opacity: .35; } }
+
+/* "Bronnen en dank": small and folded away by default. */
+details.sources { font-size: 12px; color: var(--muted); }
+details.sources > summary { font-weight: 600; font-size: 13px; color: var(--muted); min-height: 36px; display: inline-flex; align-items: center; gap: 4px; }
+details.sources > summary::before { content: "ⓘ"; }
+details.sources > summary::-webkit-details-marker { display: none; }
+details.sources > summary { list-style: none; }
+details.sources[open] > summary { color: var(--ink); }
+details.sources .credits { margin-top: 2px; font-size: 12px; }

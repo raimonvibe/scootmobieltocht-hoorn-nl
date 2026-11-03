@@ -856,7 +856,7 @@ function showDates() {
   $("copyYear").textContent = y > 2026 ? `© 2026–${y}` : "© 2026";
   if (router.built) {
     const d = new Date(router.built + "T12:00:00");
-    $("dataDate").textContent = ` (bijgewerkt ${d.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })})`;
+    $("dataDate").textContent = `, bijgewerkt ${d.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}`;
   }
 }
 $("plan").addEventListener("submit", (e) => e.preventDefault());
