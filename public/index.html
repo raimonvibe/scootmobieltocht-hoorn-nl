@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Scootmobiel Hoorn</title>
+  <meta name="description" content="Plan een scootmobielroute in Hoorn en de dorpen eromheen: fietspaden, geen trappen, met accu-check." />
+  <meta name="theme-color" content="#0d7a6b" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <a class="skip" href="#plan">Naar de routeplanner</a>
+  <aside id="panel" aria-label="Routeplanner">
+    <header>
+      <div class="titlebar">
+        <h1>🛵 Scootmobiel <span translate="no">Hoorn</span></h1>
+        <button type="button" id="helpBtn" class="ghost icon" aria-label="Sneltoetsen en hulp" title="Sneltoetsen (?)">?</button>
+      </div>
+      <p class="sub">Routes over fietspaden en rustige straten in <span translate="no">Hoorn</span> en omgeving. Zonder trappen, onverhard alleen als het moet.</p>
+      <p id="offline" class="offline" hidden>Je bent offline. Opgeslagen kaartdelen en routes werken nog.</p>
+    </header>
+
+    <div id="plan">
+      <fieldset class="stops">
+        <legend>Waar wil je heen?</legend>
+        <div id="stopList" translate="no"></div>
+        <div class="row">
+          <button type="button" id="locate" class="ghost">📍 Vanaf mijn locatie</button>
+          <button type="button" id="addVia" class="ghost">＋ Tussenstop</button>
+          <button type="button" id="swap" class="ghost" aria-label="Van en naar omwisselen">⇅ Omdraaien</button>
+        </div>
+        <p class="hint">Kies een dorp, of tik op de kaart om een punt te zetten.</p>
+      </fieldset>
+
+      <section id="result" aria-live="polite" hidden>
+        <h2>Jouw route</h2>
+        <div class="stats">
+          <div><span id="rDist">–</span><small>afstand</small></div>
+          <div><span id="rTime">–</span><small>rijtijd</small></div>
+          <div><span id="rBatt">–</span><small>van je accu</small></div>
+        </div>
+        <div id="mix" class="mix" aria-hidden="true"></div>
+        <ul id="mixLegend" class="legend"></ul>
+        <p id="weather" class="weather" hidden></p>
+        <p id="best" class="best" hidden></p>
+        <p id="warn" class="warn" hidden></p>
+        <div id="obstacles" class="obstacles" hidden></div>
+        <p id="along" class="along" hidden></p>
+        <div class="row">
+          <button type="button" id="follow">▶ Volg route</button>
+          <button type="button" id="speak" class="ghost">🔊 Voorlezen</button>
+          <button type="button" id="toilet" class="ghost">🚻 Toilet onderweg</button>
+        </div>
+        <div class="row">
+          <button type="button" id="save" class="ghost">☆ Bewaar</button>
+          <button type="button" id="share" class="ghost">🔗 Deel link</button>
+          <button type="button" id="gpx" class="ghost">⬇ GPX</button>
+        </div>
+        <details>
+          <summary>Routebeschrijving</summary>
+          <ol id="steps"></ol>
+        </details>
+        <p class="hint">Kon je ergens niet langs? Tik op dat stuk van de route en kies "Vermijd dit stuk".</p>
+      </section>
+
+      <fieldset class="grid2">
+        <legend>Mijn scootmobiel</legend>
+        <label>Soort
+          <select id="vehicle">
+            <option value="klein">Klein / stoepmodel (6 km/u)</option>
+            <option value="middel" selected>Middel (12 km/u)</option>
+            <option value="groot">Groot (15 km/u)</option>
+          </select>
+        </label>
+        <label>Voorkeur
+          <select id="profile">
+            <option value="rustig">Rustig (fietspaden)</option>
+            <option value="kortst">Kortst</option>
+          </select>
+        </label>
+        <label class="check wide"><input id="retour" type="checkbox" /> Ik rij ook weer terug</label>
+        <details class="more wide">
+          <summary>Meer instellingen</summary>
+          <div class="grid2">
+            <label>Actieradius volgens de fabrikant (km)
+              <input id="range" type="number" min="5" max="100" step="1" value="30" inputmode="numeric" />
+            </label>
+            <label>Staat van de accu
+              <select id="battery">
+                <option value="0.85">Nieuw (tot 1 jaar)</option>
+                <option value="0.7" selected>Gemiddeld</option>
+                <option value="0.55">Ouder (3+ jaar)</option>
+              </select>
+            </label>
+            <label class="check wide"><input id="avoid" type="checkbox" checked /> Vermijd hekjes, klaphekken en hoge stoepranden</label>
+          </div>
+          <p class="hint">Echte ritten halen vaak minder dan de fabrikant belooft. Daarom rekenen we met een veilige marge, die past bij de staat van je accu.</p>
+          <p id="blockedInfo" class="hint" hidden></p>
+        </details>
+      </fieldset>
+
+      <fieldset>
+        <legend>Rondjes</legend>
+        <div id="presets" class="chips" translate="no"></div>
+      </fieldset>
+
+      <fieldset id="savedBox" hidden>
+        <legend>Mijn routes</legend>
+        <ul id="favList" class="saved" translate="no"></ul>
+        <p id="recentHead" class="minihead" hidden>Recent</p>
+        <ul id="recentList" class="saved" translate="no"></ul>
+      </fieldset>
+
+      <fieldset>
+        <legend>Op de kaart</legend>
+        <div id="poiToggles" class="toggles"></div>
+      </fieldset>
+    </div>
+    <p id="status" class="status" role="status">Kaart en wegennet laden…</p>
+
+    <footer>
+      <label>Kaartstijl
+        <select id="style">
+          <option value="liberty">Kleur (3D)</option>
+          <option value="bright">Helder</option>
+          <option value="positron">Licht</option>
+          <option value="dark">Donker</option>
+          <option value="fiord">Fjord (donker)</option>
+        </select>
+      </label>
+      <p class="credits">Kaartdata © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-bijdragers<span id="dataDate"></span> · Tegels <a href="https://openfreemap.org/">OpenFreeMap</a> · <a href="https://maplibre.org/">MapLibre</a> · Weer <a href="https://open-meteo.com/">Open-Meteo</a>. Controleer ter plekke; de kaart kan afwijken.</p>
+      <div class="made">
+        <a class="codelink" href="https://github.com/raimonvibe/scootmobieltocht-hoorn-nl" target="_blank" rel="noopener">⌨ Bekijk de code!</a>
+        <p>Site ontwikkeld door <a href="https://raimonvibe.eu" target="_blank" rel="noopener" translate="no">raimonvibe</a> · <span id="copyYear" translate="no">© 2026</span></p>
+      </div>
+    </footer>
+  </aside>
+  <main id="map" aria-label="Kaart van Hoorn en omgeving" translate="no"></main>
+
+  <!-- Phone only: route summary over the map, and tabs to switch between map and planner. -->
+  <button type="button" id="summary" class="summary"><span id="summaryText">Plan je route</span><span class="go">Planner ›</span></button>
+  <nav class="tabs" aria-label="Weergave">
+    <button type="button" data-view="map" aria-pressed="true">🗺️ Kaart</button>
+    <button type="button" data-view="plan" aria-pressed="false">🧭 Planner</button>
+  </nav>
+
+  <dialog id="help" aria-labelledby="helpTitle">
+    <h2 id="helpTitle">Sneltoetsen</h2>
+    <dl class="keys">
+      <dt><kbd>/</kbd></dt><dd>Naar het veld "Van"</dd>
+      <dt><kbd>V</kbd></dt><dd>Volg route starten of stoppen</dd>
+      <dt><kbd>O</kbd></dt><dd>Route omdraaien</dd>
+      <dt><kbd>T</kbd></dt><dd>Toilet onderweg toevoegen</dd>
+      <dt><kbd>B</kbd></dt><dd>Route bewaren als favoriet</dd>
+      <dt><kbd>K</kbd></dt><dd>Volgende kaartstijl</dd>
+      <dt><kbd>?</kbd></dt><dd>Deze hulp</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Stoppen met volgen, venster sluiten</dd>
+    </dl>
+    <label class="check"><input id="letterKeys" type="checkbox" checked /> Lettertoetsen gebruiken (zet uit als je spraakbesturing gebruikt)</label>
+    <p class="hint">Installeer de site als app (in het browsermenu: "Installeren" of "Zet op beginscherm"). Na één bezoek werkt hij ook zonder internet, voor de stukken kaart die je al hebt bekeken.</p>
+    <form method="dialog"><button>Sluiten</button></form>
+  </dialog>
+
+  <script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
