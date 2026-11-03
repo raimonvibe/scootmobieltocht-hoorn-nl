@@ -1,22 +1,23 @@
-// Spoken versions of what the screen shows in short form. The screen keeps "13 min" and "2,5 km";
-// the "Voorlezen" button and screen readers get "13 minuten" and "2,5 kilometer".
+// Spoken versions of what the screen shows in short form, in the current language. The screen keeps
+// "13 min" and "2,5 km"; the "Voorlezen" button and screen readers get "13 minuten" and "2,5 kilometer".
+import { dict, t } from "./i18n.js";
 
-export function forSpeech(t) {
-  return String(t)
-    .replace(/\p{Extended_Pictographic}️?/gu, "") // emoji
-    .replace(/(\d+(?:,\d+)?)\s?km\/u\b/g, "$1 kilometer per uur")
-    .replace(/(\d+(?:,\d+)?)\s?m\/s\b/g, "$1 meter per seconde")
-    .replace(/(\d+(?:,\d+)?)\s?km\b/g, "$1 kilometer")
-    .replace(/(\d+(?:,\d+)?)\s?m\b/g, "$1 meter")
-    .replace(/(\d+)\s?u\b/g, "$1 uur")
-    .replace(/\b1\s?min\b/g, "1 minuut")
-    .replace(/(\d+)\s?min\b/g, "$1 minuten")
-    .replace(/(-?\d+)\s?°C/g, "$1 graden")
-    .replace(/\((\d+) Bft\)/g, "(windkracht $1)")
-    .replace(/\bca\.\s?/g, "ongeveer ")
-    .replace(/(\d+)×\s?/g, "$1 ")
-    .replace(/(\d+)\s?%/g, "$1 procent")
-    .replace(/\s*→\s*/g, " naar ")
+const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+
+export function forSpeech(text) {
+  let s = String(text).replace(/\p{Extended_Pictographic}️?/gu, ""); // emoji
+  const num = "(\\d+(?:[.,]\\d+)?)";
+  s = s.replace(new RegExp(`\\b1\\s?${escRe(dict()["u.min"])}(?![\\p{L}])`, "gu"), t("sp.oneMin"));
+  // Units, longest first (km/u before km before m), only right after a number.
+  for (const [abbr, word] of dict().speech) {
+    s = s.replace(new RegExp(`${num}\\s?${escRe(abbr)}(?![\\p{L}\\p{N}])`, "gu"), `$1 ${word}`);
+  }
+  return s
+    .replace(/\((\d+) Bft\)/g, (_, n) => `(${t("sp.bft", { n })})`)
+    .replace(/\bca\.\s?/g, `${t("sp.about")} `)
+    .replace(/(\d+)\s?×\s?/g, "$1 ")
+    .replace(/(\d+)\s?%/g, `$1 ${t("sp.percent")}`)
+    .replace(/\s*→\s*/g, ` ${t("sp.to")} `)
     .replace(/\s*·\s*/g, ", ")
     .replace(/\s{2,}/g, " ")
     .trim();

@@ -1,12 +1,13 @@
 // Places useful on a scootmobiel ride (from OpenStreetMap, built into public/data/pois.json).
+import { t, dict } from "./i18n.js";
 
 export const CATS = {
-  toilet: { label: "Toiletten", one: "toilet", color: "#3b8bd4", light: "#7cc8ff", on: true },
-  bankje: { label: "Bankjes", one: "bankje", color: "#6d6a5f", light: "#a29d8f", on: false, small: true },
-  supermarkt: { label: "Supermarkten", one: "supermarkt", color: "#1a9850", light: "#5fd38f", on: false },
-  apotheek: { label: "Apotheken", one: "apotheek", color: "#c2185b", light: "#ff6fa3", on: false },
-  laadpunt: { label: "Laadpunten", one: "laadpunt", color: "#e08a00", light: "#ffd166", on: true },
-  scootmobielwinkel: { label: "Scootmobielwinkels", one: "scootmobielwinkel", color: "#5b3fc4", light: "#b693ff", on: true },
+  toilet: { color: "#3b8bd4", light: "#7cc8ff", on: true },
+  bankje: { color: "#6d6a5f", light: "#a29d8f", on: false, small: true },
+  supermarkt: { color: "#1a9850", light: "#5fd38f", on: false },
+  apotheek: { color: "#c2185b", light: "#ff6fa3", on: false },
+  laadpunt: { color: "#e08a00", light: "#ffd166", on: true },
+  scootmobielwinkel: { color: "#5b3fc4", light: "#b693ff", on: true },
 };
 
 // Zoom level from which each kind shows on the map: toilets and scootmobiel shops always,
@@ -44,25 +45,29 @@ export function icon(cat) {
   return { width: size * px, height: size * px, data: g.getImageData(0, 0, size * px, size * px).data };
 }
 
-const WHEEL = { yes: "rolstoeltoegankelijk", limited: "beperkt rolstoeltoegankelijk", no: "niet rolstoeltoegankelijk" };
+// Names of the kinds, in the current language: "Toiletten" / "toilet".
+export const catLabel = (cat) => t(`poi.${cat}`);
+export const catOne = (cat) => t(`poi1.${cat}`);
 
 export function describe(p) {
-  const c = CATS[p.c];
   const bits = [];
-  if (p.w) bits.push(WHEEL[p.w] || "");
-  if (p.c === "toilet" && p.f) bits.push(p.f === "no" ? "gratis" : "betaald");
-  if (p.c === "bankje" && p.b) bits.push(p.b === "yes" ? "met rugleuning" : "zonder rugleuning");
-  if (p.h) bits.push(`open: ${hoursNl(p.h)}`);
-  return { title: p.n || c.one[0].toUpperCase() + c.one.slice(1), sub: c.one, bits: bits.filter(Boolean) };
+  if (p.w) bits.push(t(`poi.wheel.${p.w}`));
+  if (p.c === "toilet" && p.f) bits.push(t(p.f === "no" ? "poi.free" : "poi.paid"));
+  if (p.c === "bankje" && p.b) bits.push(t(p.b === "yes" ? "poi.backrest" : "poi.noBackrest"));
+  if (p.h) bits.push(t("poi.open", { h: hours(p.h) }));
+  const one = catOne(p.c);
+  return { title: p.n || one[0].toUpperCase() + one.slice(1), sub: one, bits: bits.filter((b) => b && !b.startsWith("poi.")) };
 }
 
 // OpenStreetMap writes opening hours with English day names ("Mo-Sa 08:00-20:00; Su off").
-const DAYS = { Mo: "ma", Tu: "di", We: "wo", Th: "do", Fr: "vr", Sa: "za", Su: "zo", PH: "feestdagen", SH: "schoolvakanties" };
-function hoursNl(h) {
+const OSM_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+function hours(h) {
+  const days = dict().days;
   return h
-    .replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su|PH|SH)\b/g, (d) => DAYS[d])
-    .replace(/\boff\b|\bclosed\b/g, "gesloten")
-    .replace(/24\/7/g, "dag en nacht")
+    .replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su)\b/g, (d) => days[OSM_DAYS.indexOf(d)])
+    .replace(/\bPH\b/g, t("days.ph"))
+    .replace(/\boff\b|\bclosed\b/g, t("days.off"))
+    .replace(/24\/7/g, t("days.247"))
     .replace(/;\s*/g, "; ");
 }
 

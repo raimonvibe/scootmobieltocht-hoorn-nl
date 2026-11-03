@@ -35,11 +35,10 @@
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans:wght@400;600;700;800&display=swap" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Icon set: drawn shapes with colour gradients (instead of emoji, which look different on every phone). -->
   <svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <linearGradient id="g-teal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34c79f"/><stop offset="1" stop-color="#0b6f62"/></linearGradient>
@@ -76,19 +75,20 @@
     <symbol id="i-barrier" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="7" rx="2"/><path d="M6 7l-3 7M11 7l-3 7M16 7l-3 7M21 7l-3 7" stroke="#fff" stroke-width="1.8"/><rect x="4.5" y="14" width="2.4" height="7" rx="1"/><rect x="17.1" y="14" width="2.4" height="7" rx="1"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="m6.5 6.5 11 11m0-11-11 11" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
     <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2.4"/><circle cx="12" cy="12" r="2.4"/><circle cx="19" cy="12" r="2.4"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5"/><path d="M1.8 12h20.4M12 1.5c3 3 4.4 6.5 4.4 10.5S15 19.5 12 22.5M12 1.5C9 4.5 7.6 8 7.6 12S9 19.5 12 22.5" stroke="#fff" stroke-width="1.5" fill="none"/></symbol>
     <symbol id="i-list" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M7 8h10M7 12h10M7 16h6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></symbol>
   </svg>
 
-  <a class="skip" href="#plan">Naar de routeplanner</a>
-  <aside id="panel" aria-label="Routeplanner">
+  <a class="skip" href="#plan" data-i18n="skip"></a>
+  <aside id="panel" data-i18n-aria="panel.aria">
     <!-- Phone only: the panel is a sheet over the map. This bar shows the route in short and sizes the sheet. -->
     <div class="sheet-bar">
-      <button type="button" id="sheetGrab" class="sheet-grab" aria-label="Paneel groter of kleiner maken"><span></span></button>
+      <button type="button" id="sheetGrab" class="sheet-grab"><span></span></button>
       <div class="sheet-row">
-        <p id="summaryText" class="sheet-summary">Plan je route</p>
+        <p id="summaryText" class="sheet-summary" data-i18n="summary.empty"></p>
         <div class="sheet-size">
-          <button type="button" id="sheetLess" class="ghost icon" aria-label="Paneel kleiner, meer kaart"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-down"/></svg></button>
-          <button type="button" id="sheetMore" class="ghost icon" aria-label="Paneel groter"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-up"/></svg></button>
+          <button type="button" id="sheetLess" class="ghost icon" data-i18n-aria="sheet.less"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-down"/></svg></button>
+          <button type="button" id="sheetMore" class="ghost icon" data-i18n-aria="sheet.more"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-up"/></svg></button>
         </div>
       </div>
     </div>
@@ -96,51 +96,61 @@
     <header>
       <div class="titlebar">
         <h1><svg class="ic teal big" aria-hidden="true" focusable="false"><use href="#i-scooter"/></svg> <span>Scootmobiel <span translate="no">Hoorn</span></span></h1>
-        <button type="button" id="helpBtn" class="ghost help-btn" aria-label="Hulp: hoe werkt het?"><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-help"/></svg><span>Hulp</span></button>
+        <button type="button" id="helpBtn" class="ghost help-btn" data-i18n-aria="help.aria"><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-help"/></svg><span data-i18n="help.btn"></span></button>
       </div>
-      <p class="sub">Routes over fietspaden en rustige straten in <span translate="no">Hoorn</span> en omgeving. Zonder trappen, onverhard alleen als het moet.</p>
-      <!-- translate="no": the style names stay Dutch even when the browser translates the page. -->
-      <label class="stylepick" translate="no"><span><svg class="ic violet" aria-hidden="true" focusable="false"><use href="#i-palette"/></svg> Kaartstijl</span>
-        <select id="style">
-          <option value="liberty">Kleur (3D)</option>
-          <option value="bright">Helder (3D)</option>
-          <option value="positron">Licht (3D)</option>
-          <option value="dark">Donker (3D)</option>
-          <option value="fiord">Fjord, donker (3D)</option>
-          <option value="liberty2d">Kleur (2D, plat)</option>
-        </select>
-      </label>
-      <p id="offline" class="offline" hidden>Je bent offline. Routes plannen werkt gewoon. De kaart kan stukken missen en het weer ontbreekt.</p>
+      <p class="sub" data-i18n="sub"></p>
+      <div class="pickers">
+        <!-- translate="no": names stay as chosen, even when the browser translates the page. -->
+        <label class="stylepick" translate="no"><span><svg class="ic violet" aria-hidden="true" focusable="false"><use href="#i-palette"/></svg> <span data-i18n="style.label"></span></span>
+          <select id="style">
+            <option value="liberty" data-i18n="style.liberty"></option>
+            <option value="bright" data-i18n="style.bright"></option>
+            <option value="positron" data-i18n="style.positron"></option>
+            <option value="dark" data-i18n="style.dark"></option>
+            <option value="fiord" data-i18n="style.fiord"></option>
+            <option value="liberty2d" data-i18n="style.liberty2d"></option>
+          </select>
+        </label>
+        <label class="stylepick" translate="no"><span><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-globe"/></svg> <span data-i18n="lang.label"></span></span>
+          <select id="lang">
+            <option value="nl" lang="nl">Nederlands</option>
+            <option value="en" lang="en">English</option>
+            <option value="de" lang="de">Deutsch</option>
+            <option value="uk" lang="uk">Українська</option>
+          </select>
+        </label>
+      </div>
+      <p id="offline" class="offline" hidden data-i18n="offline"></p>
     </header>
 
     <div id="plan" tabindex="-1">
       <fieldset class="stops">
-        <legend><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-route"/></svg> Waar wil je heen?</legend>
+        <legend><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-route"/></svg> <span data-i18n="stops.legend"></span></legend>
         <div id="stopList" translate="no"></div>
         <div class="row">
-          <button type="button" id="locate" class="ghost"><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-pin"/></svg> Vanaf mijn locatie</button>
-          <button type="button" id="addVia" class="ghost"><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-plus"/></svg> Tussenstop</button>
-          <button type="button" id="swap" class="ghost" aria-label="Van en naar omwisselen"><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-swap"/></svg> Omdraaien</button>
+          <button type="button" id="locate" class="ghost"><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-pin"/></svg> <span class="lbl" data-i18n="locate"></span></button>
+          <button type="button" id="addVia" class="ghost"><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-plus"/></svg> <span data-i18n="addVia"></span></button>
+          <button type="button" id="swap" class="ghost" data-i18n-aria="swap.aria"><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-swap"/></svg> <span data-i18n="swap"></span></button>
         </div>
-        <p class="hint">Kies een plaats of wijk, of tik op de kaart om een punt te zetten.</p>
+        <p class="hint" data-i18n="stops.hint"></p>
       </fieldset>
 
       <section id="result" aria-labelledby="resultTitle" hidden>
-        <h2 id="resultTitle">Jouw route</h2>
+        <h2 id="resultTitle" data-i18n="result.title"></h2>
         <div class="stats" aria-live="polite">
-          <div><span id="rDist">–</span><small>afstand</small></div>
-          <div><span id="rTime">–</span><small>rijtijd</small></div>
-          <div><span id="rArrive">–</span><small id="rArriveLabel">aankomst</small></div>
+          <div><span id="rDist">–</span><small data-i18n="stat.dist"></small></div>
+          <div><span id="rTime">–</span><small data-i18n="stat.time"></small></div>
+          <div><span id="rArrive">–</span><small id="rArriveLabel" data-i18n="stat.arrive"></small></div>
         </div>
         <p id="gist" class="gist" aria-live="polite"></p>
         <p id="warn" class="warn" hidden></p>
         <div class="row actions">
-          <button type="button" id="speak" class="ghost"><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-speaker"/></svg> <span class="lbl">Voorlezen</span></button>
-          <button type="button" id="toilet" class="ghost"><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-toilet"/></svg> Toilet onderweg</button>
-          <button type="button" id="share" class="ghost"><svg class="ic violet" aria-hidden="true" focusable="false"><use href="#i-share"/></svg> Deel route</button>
+          <button type="button" id="speak" class="ghost"><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-speaker"/></svg> <span class="lbl" data-i18n="speak"></span></button>
+          <button type="button" id="toilet" class="ghost"><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-toilet"/></svg> <span data-i18n="toilet"></span></button>
+          <button type="button" id="share" class="ghost"><svg class="ic violet" aria-hidden="true" focusable="false"><use href="#i-share"/></svg> <span data-i18n="share"></span></button>
         </div>
         <details class="route-more">
-          <summary><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-more"/></svg> Meer over deze route</summary>
+          <summary><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-more"/></svg> <span data-i18n="more"></span></summary>
           <div id="mix" class="mix" aria-hidden="true"></div>
           <ul id="mixLegend" class="legend"></ul>
           <p id="weather" class="weather" hidden></p>
@@ -148,70 +158,75 @@
           <div id="obstacles" class="obstacles" hidden></div>
           <p id="along" class="along" hidden></p>
           <div class="row">
-            <button type="button" id="follow" class="ghost"><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-play"/></svg> <span class="lbl">Volg route</span></button>
-            <button type="button" id="save" class="ghost"><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-star"/></svg> <span class="lbl">Bewaar</span></button>
+            <button type="button" id="follow" class="ghost"><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-play"/></svg> <span class="lbl" data-i18n="follow"></span></button>
+            <button type="button" id="save" class="ghost"><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-star"/></svg> <span class="lbl" data-i18n="save"></span></button>
           </div>
         </details>
         <details class="route-steps">
-          <summary><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-list"/></svg> Routebeschrijving</summary>
+          <summary><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-list"/></svg> <span data-i18n="steps.title"></span></summary>
           <ol id="steps"></ol>
         </details>
-        <p class="hint">Kon je ergens niet langs? Tik op dat stuk van de route en kies "Vermijd dit stuk".</p>
+        <p class="hint" data-i18n="result.hint"></p>
       </section>
 
       <fieldset class="grid2">
-        <legend><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-scooter"/></svg> Mijn scootmobiel</legend>
-        <label>Soort
+        <legend><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-scooter"/></svg> <span data-i18n="vehicle.legend"></span></legend>
+        <label><span data-i18n="vehicle.label"></span>
           <select id="vehicle">
-            <option value="klein">Klein / stoepmodel (6 km/u)</option>
-            <option value="middel" selected>Middel (12 km/u)</option>
-            <option value="groot">Groot (15 km/u)</option>
+            <option value="klein" data-i18n="vehicle.klein"></option>
+            <option value="middel" selected data-i18n="vehicle.middel"></option>
+            <option value="groot" data-i18n="vehicle.groot"></option>
           </select>
         </label>
-        <label>Voorkeur
+        <label><span data-i18n="profile.label"></span>
           <select id="profile">
-            <option value="rustig">Rustig (fietspaden)</option>
-            <option value="kortst">Kortst</option>
+            <option value="rustig" data-i18n="profile.rustig"></option>
+            <option value="kortst" data-i18n="profile.kortst"></option>
           </select>
         </label>
-        <label class="check wide"><input id="retour" type="checkbox" /> Ik rij ook weer terug</label>
+        <label class="check wide"><input id="retour" type="checkbox" /> <span data-i18n="retour"></span></label>
         <details class="more wide">
-          <summary>Meer instellingen</summary>
-          <label class="check"><input id="avoid" type="checkbox" checked /> Vermijd hekjes, klaphekken en hoge stoepranden</label>
+          <summary data-i18n="moreSettings"></summary>
+          <label class="check"><input id="avoid" type="checkbox" checked /> <span data-i18n="avoid"></span></label>
+          <!-- Only shown when the device has both a female and a male voice for this language. -->
+          <fieldset id="voiceBox" class="voice" hidden>
+            <legend data-i18n="voice.label"></legend>
+            <label class="check"><input type="radio" name="voice" value="female" /> <span data-i18n="voice.female"></span></label>
+            <label class="check"><input type="radio" name="voice" value="male" /> <span data-i18n="voice.male"></span></label>
+          </fieldset>
           <p id="blockedInfo" class="hint" hidden></p>
         </details>
       </fieldset>
 
       <fieldset>
-        <legend><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-compass"/></svg> Rondjes</legend>
+        <legend><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-compass"/></svg> <span data-i18n="presets.legend"></span></legend>
         <div id="presets" class="chips" translate="no"></div>
       </fieldset>
 
       <fieldset id="savedBox" hidden>
-        <legend><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-star"/></svg> Mijn routes</legend>
+        <legend><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-star"/></svg> <span data-i18n="saved.legend"></span></legend>
         <ul id="favList" class="saved" translate="no"></ul>
-        <p id="recentHead" class="minihead" hidden>Recent</p>
+        <p id="recentHead" class="minihead" hidden data-i18n="recent"></p>
         <ul id="recentList" class="saved" translate="no"></ul>
       </fieldset>
 
       <fieldset>
-        <legend><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-map"/></svg> Op de kaart</legend>
+        <legend><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-map"/></svg> <span data-i18n="layers.legend"></span></legend>
         <div id="poiToggles" class="toggles"></div>
       </fieldset>
     </div>
-    <p id="status" class="status" role="status">Kaart en wegennet laden…</p>
+    <p id="status" class="status" role="status" data-i18n="status.loading"></p>
 
     <footer>
-      <p class="credits">Controleer de route ter plekke; de kaart kan afwijken van de werkelijkheid.</p>
-      <!-- Folded away; the required map credit stays visible in the map corner. translate="no" keeps it in
-           Dutch and stops browser translation from gluing the names to the surrounding words. -->
+      <p class="credits" data-i18n="footer.check"></p>
+      <!-- Folded away; the required map credit stays visible in the map corner. -->
       <details class="sources" translate="no">
-        <summary><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-info"/></svg> Bronnen en dank</summary>
-        <p class="credits">Met dank aan: de vrijwilligers van <a href="https://www.openstreetmap.org/copyright" translate="no">OpenStreetMap</a> voor de wegen en plekken (© OpenStreetMap-bijdragers<span id="dataDate"></span>), <a href="https://openfreemap.org/" translate="no">OpenFreeMap</a> en <a href="https://www.openmaptiles.org/" translate="no">OpenMapTiles</a> voor de kaartbeelden, <a href="https://open-meteo.com/" translate="no">Open-Meteo</a> voor het weerbericht en <a href="https://maplibre.org/" translate="no">MapLibre</a> voor het tekenen van de kaart. Dit zijn de namen van gratis, open diensten.</p>
+        <summary><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-info"/></svg> <span data-i18n="sources"></span></summary>
+        <p data-i18n-html="sources.text" class="credits"></p>
       </details>
       <div class="made">
-        <a class="codelink" href="https://github.com/raimonvibe/scootmobieltocht-hoorn-nl" target="_blank" rel="noopener"><svg class="ic white" aria-hidden="true" focusable="false"><use href="#i-code"/></svg> Bekijk de code!</a>
-        <p>Site ontwikkeld door <a href="https://raimonvibe.nl" target="_blank" rel="noopener" translate="no" title="Naar raimonvibe.nl">Stefan</a> · <span id="copyYear" translate="no">© 2026</span></p>
+        <a class="codelink" href="https://github.com/raimonvibe/scootmobieltocht-hoorn-nl" target="_blank" rel="noopener"><svg class="ic white" aria-hidden="true" focusable="false"><use href="#i-code"/></svg> <span data-i18n="code"></span></a>
+        <p><span data-i18n="madeBy"></span> <a href="https://raimonvibe.nl" target="_blank" rel="noopener" translate="no" title="raimonvibe.nl">Stefan</a> · <span id="copyYear" translate="no">© 2026</span></p>
       </div>
     </footer>
   </aside>
@@ -220,114 +235,114 @@
   <div id="loading" class="loading" role="status" aria-live="polite">
     <div class="loading-card">
       <svg class="ic teal loading-icon" aria-hidden="true" focusable="false"><use href="#i-scooter"/></svg>
-      <p id="loadingText">De kaart en het wegennet worden geladen…</p>
+      <p id="loadingText" data-i18n="loading.text"></p>
       <div class="loading-bar" aria-hidden="true"><span></span></div>
-      <p class="loading-sub">Bij je eerste bezoek kan dit een paar seconden duren.</p>
-      <button type="button" id="loadingRetry" hidden>Opnieuw proberen</button>
+      <p class="loading-sub" data-i18n="loading.sub"></p>
+      <button type="button" id="loadingRetry" hidden data-i18n="loading.retry"></button>
     </div>
   </div>
-  <main id="map" aria-label="Kaart van Hoorn en omgeving" translate="no"></main>
+  <main id="map" data-i18n-aria="map.aria" translate="no"></main>
 
   <!-- Place picker: search plus the grouped list of places and neighbourhoods. -->
   <dialog id="picker" class="picker" aria-labelledby="pickerTitle">
     <div class="picker-head">
-      <h2 id="pickerTitle">Kies een plaats</h2>
-      <form method="dialog"><button class="ghost icon" aria-label="Sluiten zonder te kiezen"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button></form>
+      <h2 id="pickerTitle"></h2>
+      <form method="dialog"><button class="ghost icon" data-i18n-aria="picker.close"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button></form>
     </div>
-    <label class="picker-search"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-search"/></svg><span class="sr-only">Zoek een plaats of wijk</span>
-      <input id="pickerInput" type="search" placeholder="Zoek een plaats of wijk" autocomplete="off" enterkeyhint="search" aria-controls="pickerList" aria-describedby="pickerCount" />
+    <label class="picker-search"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-search"/></svg><span class="sr-only" data-i18n="picker.search"></span>
+      <input id="pickerInput" type="search" data-i18n-ph="picker.search" autocomplete="off" enterkeyhint="search" aria-controls="pickerList" aria-describedby="pickerCount" />
     </label>
     <p id="pickerCount" class="sr-only" aria-live="polite"></p>
-    <div id="pickerList" class="picker-list" translate="no"></div>
+    <div id="pickerList" class="picker-list" translate="no" lang="nl"></div>
   </dialog>
 
   <dialog id="help" class="help" aria-labelledby="helpTitle">
     <div class="help-head">
-      <h2 id="helpTitle">Hoe werkt het?</h2>
-      <form method="dialog"><button class="ghost icon" aria-label="Uitleg sluiten"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button></form>
+      <h2 id="helpTitle" data-i18n="help.title"></h2>
+      <form method="dialog"><button class="ghost icon" data-i18n-aria="help.closeAria"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-close"/></svg></button></form>
     </div>
 
     <section>
-      <h3><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-route"/></svg> Een route plannen</h3>
-      <p>Tik bij <strong>Van</strong> en <strong>Naar</strong> en kies een plaats of wijk. Je kunt ook typen om te zoeken. Of tik op de kaart om een punt te zetten. De route verschijnt meteen.</p>
-      <p>Met <strong>Vanaf mijn locatie</strong> begint de route waar je nu bent.</p>
-      <p>Op de telefoon schuift het paneel over de kaart. Met de pijltjes bovenaan maak je het groter of kleiner.</p>
+      <h3><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-route"/></svg> <span data-i18n="help.plan"></span></h3>
+      <p data-i18n-html="help.plan.p1"></p>
+      <p data-i18n-html="help.plan.p2"></p>
+      <p data-i18n-html="help.plan.p3"></p>
     </section>
 
     <section>
-      <h3><svg class="ic violet" aria-hidden="true" focusable="false"><use href="#i-palette"/></svg> De kleuren van de route</h3>
+      <h3><svg class="ic violet" aria-hidden="true" focusable="false"><use href="#i-palette"/></svg> <span data-i18n="help.colors"></span></h3>
       <ul class="help-legend">
-        <li><i style="background:#1f9e6e"></i> Fietspad: rustig en meestal breed</li>
-        <li><i style="background:#3b8bd4"></i> Woonstraat: rustig</li>
-        <li><i style="background:#f2a33a"></i> Doorgaande weg: let op het verkeer</li>
-        <li><i style="background:#e0523f"></i> Drukke weg: liever vermijden</li>
-        <li><i class="dashed"></i> Gestippeld: onverhard</li>
+        <li><i style="background:#1f9e6e"></i> <span data-i18n="help.c0"></span></li>
+        <li><i style="background:#3b8bd4"></i> <span data-i18n="help.c2"></span></li>
+        <li><i style="background:#f2a33a"></i> <span data-i18n="help.c4"></span></li>
+        <li><i style="background:#e0523f"></i> <span data-i18n="help.c5"></span></li>
+        <li><i class="dashed"></i> <span data-i18n="help.dashed"></span></li>
       </ul>
-      <p><span class="dot-help" style="background:#f2a33a">!</span> Oranje: een paaltje of hek, meestal te passeren.<br />
-         <span class="dot-help" style="background:#e0523f">!</span> Rood: een klaphek of hoge stoeprand, vaak niet te passeren.</p>
+      <p><span class="dot-help" style="background:#f2a33a">!</span> <span data-i18n="help.soft"></span><br />
+         <span class="dot-help" style="background:#e0523f">!</span> <span data-i18n="help.hard"></span></p>
     </section>
 
     <section>
-      <h3><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-wind"/></svg> Wind en weer</h3>
-      <p>De planner kijkt naar het weer van nu en de komende uren. Je ziet of je tegenwind of wind mee hebt, en of er regen of harde windstoten aankomen. Soms krijg je een tip om iets later te vertrekken.</p>
+      <h3><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-wind"/></svg> <span data-i18n="help.weather"></span></h3>
+      <p data-i18n="help.weather.p"></p>
     </section>
 
     <section>
-      <h3><svg class="ic coral" aria-hidden="true" focusable="false"><use href="#i-barrier"/></svg> Kon je ergens niet langs?</h3>
-      <p>Tik op dat stuk van de route en kies <strong>Vermijd dit stuk</strong>. De planner gaat er dan voortaan omheen. Terugzetten kan onder <strong>Meer instellingen</strong>.</p>
+      <h3><svg class="ic coral" aria-hidden="true" focusable="false"><use href="#i-barrier"/></svg> <span data-i18n="help.blocked"></span></h3>
+      <p data-i18n-html="help.blocked.p"></p>
     </section>
 
     <section>
-      <h3><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-speaker"/></svg> Onderweg</h3>
-      <p><strong>Voorlezen</strong> leest de route hardop voor. <strong>Toilet onderweg</strong> zoekt het dichtstbijzijnde openbare toilet en zet het als tussenstop in je route.</p>
+      <h3><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-speaker"/></svg> <span data-i18n="help.onway"></span></h3>
+      <p data-i18n-html="help.onway.p"></p>
     </section>
 
     <section id="installHelp">
-      <h3><svg class="ic violet" aria-hidden="true" focusable="false"><use href="#i-phone"/></svg> Op je beginscherm zetten</h3>
-      <p>Dan open je de planner met één tik, net als een app.</p>
-      <button type="button" id="installNow" hidden><svg class="ic white" aria-hidden="true" focusable="false"><use href="#i-phone"/></svg> Zet op mijn beginscherm</button>
+      <h3><svg class="ic violet" aria-hidden="true" focusable="false"><use href="#i-phone"/></svg> <span data-i18n="help.install"></span></h3>
+      <p data-i18n="help.install.p"></p>
+      <button type="button" id="installNow" hidden><svg class="ic white" aria-hidden="true" focusable="false"><use href="#i-phone"/></svg> <span data-i18n="installNow"></span></button>
       <ol class="install-steps" data-os="ios">
-        <li><strong>iPhone of iPad:</strong> tik in Safari onderin op de <strong>Deel-knop</strong> (vierkantje met een pijl omhoog).</li>
-        <li>Kies <strong>Zet op beginscherm</strong> en tik op <strong>Voeg toe</strong>.</li>
+        <li data-i18n-html="help.ios1"></li>
+        <li data-i18n-html="help.ios2"></li>
       </ol>
       <ol class="install-steps" data-os="android">
-        <li><strong>Android:</strong> tik in Chrome rechtsboven op de <strong>drie puntjes</strong>.</li>
-        <li>Kies <strong>Toevoegen aan startscherm</strong> of <strong>App installeren</strong>.</li>
+        <li data-i18n-html="help.and1"></li>
+        <li data-i18n-html="help.and2"></li>
       </ol>
     </section>
 
     <section>
-      <h3><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-map"/></svg> Geen internet onderweg?</h3>
+      <h3><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-map"/></svg> <span data-i18n="help.offline"></span></h3>
       <ul class="offline-list">
-        <li><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-check"/></svg> Routes plannen werkt gewoon, in het hele gebied.</li>
-        <li><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-check"/></svg> De afstand, de rijtijd en de routebeschrijving staan er gewoon bij.</li>
-        <li><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-info"/></svg> De kaart laat alleen stukken zien die al eens op je scherm stonden.</li>
-        <li><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-info"/></svg> Het weer is er dan niet.</li>
+        <li><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-check"/></svg> <span data-i18n="help.off1"></span></li>
+        <li><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-check"/></svg> <span data-i18n="help.off2"></span></li>
+        <li><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-info"/></svg> <span data-i18n="help.off3"></span></li>
+        <li><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-info"/></svg> <span data-i18n="help.off4"></span></li>
       </ul>
-      <p><strong>Tip:</strong> open de planner één keer thuis met wifi en bekijk je route. Dan staat alles klaar voor onderweg.</p>
+      <p data-i18n-html="help.offTip"></p>
     </section>
 
     <section>
-      <h3><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-pin"/></svg> Lukt je locatie niet?</h3>
-      <p>Geef de site toestemming als je telefoon daarom vraagt. Zei je eerder nee? Tik dan op het slotje naast het webadres en zet <strong>Locatie</strong> aan. Op een laptop of computer lukt het vaak niet, want die heeft geen gps. Kies dan een plaats, of tik op de kaart.</p>
+      <h3><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-pin"/></svg> <span data-i18n="help.location"></span></h3>
+      <p data-i18n-html="help.location.p"></p>
     </section>
 
     <section class="keys-only">
-      <h3><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-code"/></svg> Sneltoetsen (met een toetsenbord)</h3>
+      <h3><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-code"/></svg> <span data-i18n="help.keys"></span></h3>
       <dl class="keys">
-        <dt><kbd>/</kbd></dt><dd>Plaats zoeken voor "Van"</dd>
-        <dt><kbd>V</kbd></dt><dd>Volg route starten of stoppen</dd>
-        <dt><kbd>O</kbd></dt><dd>Route omdraaien</dd>
-        <dt><kbd>T</kbd></dt><dd>Toilet onderweg toevoegen</dd>
-        <dt><kbd>B</kbd></dt><dd>Route bewaren als favoriet</dd>
-        <dt><kbd>K</kbd></dt><dd>Volgende kaartstijl</dd>
-        <dt><kbd>?</kbd></dt><dd>Deze uitleg</dd>
-        <dt><kbd>Esc</kbd></dt><dd>Stoppen met volgen, venster sluiten</dd>
+        <dt><kbd>/</kbd></dt><dd data-i18n="key.slash"></dd>
+        <dt><kbd>V</kbd></dt><dd data-i18n="key.v"></dd>
+        <dt><kbd>O</kbd></dt><dd data-i18n="key.o"></dd>
+        <dt><kbd>T</kbd></dt><dd data-i18n="key.t"></dd>
+        <dt><kbd>B</kbd></dt><dd data-i18n="key.b"></dd>
+        <dt><kbd>K</kbd></dt><dd data-i18n="key.k"></dd>
+        <dt><kbd>?</kbd></dt><dd data-i18n="key.q"></dd>
+        <dt><kbd>Esc</kbd></dt><dd data-i18n="key.esc"></dd>
       </dl>
-      <label class="check"><input id="letterKeys" type="checkbox" checked /> Lettertoetsen gebruiken (zet uit als je spraakbesturing gebruikt)</label>
+      <label class="check"><input id="letterKeys" type="checkbox" checked /> <span data-i18n="letterKeys"></span></label>
     </section>
 
-    <form method="dialog"><button class="help-close">Sluiten</button></form>
+    <form method="dialog"><button class="help-close" data-i18n="help.close"></button></form>
   </dialog>
 
   <script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>

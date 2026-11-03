@@ -1,40 +1,75 @@
-// Wind and weather from Open-Meteo (free, no key, allows browser requests), and what it does to the battery.
+// Wind and weather from Open-Meteo (free, no key, allows browser requests).
+// Each fetch is also kept on the device for 24 hours, so the forecast fetched at home on wifi
+// is still there on the road without internet.
 
 const URL_ = "https://api.open-meteo.com/v1/forecast?latitude=52.64&longitude=5.06" +
   "&current=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation" +
-  "&hourly=precipitation_probability,wind_speed_10m,wind_direction_10m,temperature_2m&forecast_hours=12" +
-  "&daily=sunrise,sunset&forecast_days=1&wind_speed_unit=ms&timezone=Europe%2FAmsterdam";
+  "&hourly=precipitation_probability,wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m&forecast_hours=24" +
+  "&daily=sunrise,sunset&forecast_days=2&wind_speed_unit=ms&timezone=Europe%2FAmsterdam";
 const MAX_AGE = 15 * 60 * 1000;
+const KEEP = 24 * 3600 * 1000;
+const STORE = "scootmobiel-weather";
 let cached = null;
 
 export async function getWeather() {
   if (cached && Date.now() - cached.at < MAX_AGE) return cached.data;
-  const r = await fetch(URL_);
-  if (!r.ok) throw new Error("weer niet beschikbaar");
-  const j = await r.json();
-  const data = {
-    temp: j.current.temperature_2m,
-    wind: j.current.wind_speed_10m,
-    gust: j.current.wind_gusts_10m,
-    from: j.current.wind_direction_10m, // degrees the wind comes FROM
-    rainNow: j.current.precipitation,
-    rainChance: Math.max(...(j.hourly?.precipitation_probability || [0]).slice(0, 4)),
-    hours: (j.hourly?.time || []).map((t, i) => ({
-      time: t, // local time, "2026-11-03T14:00"
-      wind: j.hourly.wind_speed_10m[i],
-      from: j.hourly.wind_direction_10m[i],
-      temp: j.hourly.temperature_2m[i],
-      rain: j.hourly.precipitation_probability[i],
-    })),
-    sunrise: j.daily?.sunrise?.[0],
-    sunset: j.daily?.sunset?.[0],
-  };
+  let j, savedAt = null;
+  try {
+    if (navigator.onLine === false) throw new Error("offline");
+    const r = await fetch(URL_);
+    if (!r.ok) throw new Error("weer niet beschikbaar");
+    j = await r.json();
+    try { localStorage.setItem(STORE, JSON.stringify({ at: Date.now(), j })); } catch { /* storage full or blocked */ }
+  } catch (err) {
+    // No internet: use the last forecast, if it's less than a day old.
+    let kept = null;
+    try { kept = JSON.parse(localStorage.getItem(STORE)); } catch { /* nothing kept */ }
+    if (!kept || Date.now() - kept.at > KEEP) throw err;
+    j = kept.j; savedAt = kept.at;
+  }
+  const data = build(j, savedAt);
+  if (!data.hours.length) throw new Error("weerbericht te oud");
   cached = { at: Date.now(), data };
   return data;
 }
 
-const DIRS = ["noorden", "noordoosten", "oosten", "zuidoosten", "zuiden", "zuidwesten", "westen", "noordwesten"];
-export const dirName = (deg) => DIRS[Math.round(deg / 45) % 8];
+// Local hour key like the API's "2026-11-03T14:00", to find "now" in an hourly list.
+function hourKey(d = new Date()) {
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:00`;
+}
+
+function build(j, savedAt) {
+  const h = j.hourly || {};
+  const now = hourKey();
+  const hours = (h.time || []).map((time, i) => ({
+    time,
+    wind: h.wind_speed_10m[i],
+    from: h.wind_direction_10m[i], // degrees the wind comes FROM
+    gust: h.wind_gusts_10m?.[i] ?? h.wind_speed_10m[i] * 1.5,
+    temp: h.temperature_2m[i],
+    rain: h.precipitation_probability[i],
+  })).filter((x) => x.time >= now);
+  // Fresh: the live "current" values. Kept forecast: the hour that is now.
+  const cur = savedAt ? hours[0] : null;
+  const today = now.slice(0, 10);
+  const day = Math.max(0, (j.daily?.time || []).indexOf(today));
+  return {
+    temp: cur ? cur.temp : j.current.temperature_2m,
+    wind: cur ? cur.wind : j.current.wind_speed_10m,
+    gust: cur ? cur.gust : j.current.wind_gusts_10m,
+    from: cur ? cur.from : j.current.wind_direction_10m,
+    rainNow: cur ? 0 : j.current.precipitation,
+    rainChance: Math.max(0, ...hours.slice(0, 4).map((x) => x.rain)),
+    hours: hours.slice(0, 12),
+    sunrise: j.daily?.sunrise?.[day],
+    sunset: j.daily?.sunset?.[day],
+    savedAt,
+  };
+}
+
+// Wind direction as one of eight compass points (0 = north); the words come from the language file.
+export const dirIndex = (deg) => Math.round(deg / 45) % 8;
 export function beaufort(ms) {
   const limits = [0.3, 1.6, 3.4, 5.5, 8, 10.8, 13.9, 17.2, 20.8, 24.5, 28.5, 32.7];
   const i = limits.findIndex((l) => ms < l);

@@ -437,3 +437,22 @@ kbd { font: 700 0.875rem ui-monospace, monospace; border: 1px solid var(--line);
 .offline-list { list-style: none; padding: 0; margin: 4px 0 8px; }
 .offline-list li { display: flex; gap: 10px; align-items: flex-start; }
 .offline-list .ic { margin-top: .15em; }
+
+/* ---------- languages: room for longer text (German, Ukrainian) ---------- */
+body { font-family: "Nunito", "Noto Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+/* Ukrainian/Cyrillic: a touch more line height reads better. */
+:lang(uk) body, html:lang(uk) body { line-height: 1.6; }
+.pickers { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.pickers .stylepick { flex: 1 1 15rem; min-width: 0; }
+/* Buttons may wrap onto two lines and grow taller instead of cutting text off. */
+button { height: auto; white-space: normal; text-align: center; line-height: 1.25; }
+button .lbl { min-width: 0; }
+.chips button { text-align: left; }
+legend { max-width: 100%; white-space: normal; }
+fieldset.voice { border: 0; padding: 4px 0 0; margin: 4px 0 0; box-shadow: none; background: none; display: flex; flex-wrap: wrap; gap: 0 18px; }
+fieldset.voice legend { font-size: 1rem; font-weight: 800; color: var(--muted); background: none; padding: 0; margin: 0 0 2px; flex-basis: 100%; }
+input[type="radio"] { width: 22px; height: 22px; accent-color: var(--accent); flex: none; }
+/* "Whole route" on the map */
+.overview-ctl button { width: auto !important; height: auto !important; min-height: 44px; padding: 6px 12px 6px 10px; display: inline-flex; gap: 6px; align-items: center; font: 800 0.9375rem/1.2 "Nunito", "Noto Sans", sans-serif; color: var(--ink); background: var(--card); border: 0; border-radius: 14px; }
+.overview-ctl button .ic { width: 1.3em; height: 1.3em; }
+@media (max-width: 360px) { .overview-ctl .lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } }
