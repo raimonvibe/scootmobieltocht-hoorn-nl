@@ -15,7 +15,7 @@ Gebouwd naar het voorbeeld van [amsterdam-metro-v2](https://github.com/raimonvib
 - 📍 **Tussenstops**: kies dorpen, of klik op de kaart
 - 🔁 **Rondjes**: kant-en-klare routes, zoals de dijkroute langs het Markermeer
 - ▶️ **Volg route**: een stip rijdt de route af en de camera volgt mee. Dat staat uit bij "beweging verminderen"
-- 🧭 **Routebeschrijving** per straat, een **GPX**-download en een **deelbare link** (de route staat in de URL)
+- 🧭 **Routebeschrijving** per straat en een **deelbare link** (de route staat in de URL)
 - ♿ Werkt ook **zonder kaart** (geen WebGL) als tekstversie, met een skip-link en toetsenbordbediening
 - 🚧 **Hekjes, klaphekken, paaltjes en hoge stoepranden** uit OpenStreetMap: de route gaat er zo mogelijk omheen, en wat overblijft staat op de kaart (oranje = meestal te passeren, rood = vaak niet)
 - 🚻 **Plekken onderweg**: toiletten, bankjes, supermarkten, apotheken en scootmobielwinkels. Klik erop om ze als tussenstop te gebruiken, of druk op **Toilet onderweg**
@@ -80,7 +80,7 @@ Wil je een groter gebied? Pas de tegels in `fetch-osm.sh` en `maxBounds` in `pub
 ## Bestanden
 
 - `public/index.html`, `style.css`: de pagina
-- `public/app.js`: kaart, bediening, routebeschrijving, GPX, deellink
+- `public/app.js`: kaart, bediening, routebeschrijving, deellink
 - `public/router.js`: het wegennet laden, klikken naar het dichtstbijzijnde pad snappen, A*, obstakels
 - `public/pois.js`, `weather.js`, `follow.js`, `saved.js`: plekken, wind/accu, Volg route, Mijn routes
 - `public/sw.js`, `manifest.webmanifest`: offline en installeren als app

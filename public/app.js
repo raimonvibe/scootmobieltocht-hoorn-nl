@@ -750,17 +750,7 @@ function toggleFollow() {
 }
 function stopFollow() { follower.stop(); $("follow").textContent = "▶ Volg route"; }
 
-// ---------- GPX + share ----------
-$("gpx").addEventListener("click", () => {
-  if (!lastRoute) return;
-  const pts = lastRoute.coords.map(([lon, lat]) => `<trkpt lat="${lat.toFixed(6)}" lon="${lon.toFixed(6)}"/>`).join("");
-  const gpx = `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Scootmobiel Hoorn" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>${esc(routeName())}</name><trkseg>${pts}</trkseg></trk></gpx>`;
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([gpx], { type: "application/gpx+xml" }));
-  a.download = "scootmobiel-route.gpx";
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-});
+// ---------- share ----------
 $("share").addEventListener("click", async () => {
   writeHash();
   try { await navigator.clipboard.writeText(location.href); status("Link gekopieerd."); }
