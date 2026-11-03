@@ -395,3 +395,20 @@ details.sources .credits { margin-top: 2px; font-size: 12px; }
 .stylepick { flex-direction: row; align-items: center; gap: 10px; margin-top: 10px; color: var(--ink); font-weight: 700; font-size: 14px; }
 .stylepick span { white-space: nowrap; }
 .stylepick select { flex: 1; min-height: 44px; background: color-mix(in srgb, var(--card) 80%, transparent); font-weight: 600; }
+
+/* Map credits: full line on bigger screens; a small ⓘ on phones that opens on tap. */
+.credits-toggle { display: none; }
+@media (max-width: 760px) {
+  .maplibregl-ctrl-attrib.credits-map { display: flex; align-items: center; gap: 6px; padding: 0; border-radius: 999px; max-width: calc(100vw - 24px); }
+  .credits-toggle {
+    display: grid; place-items: center; width: 30px; height: 30px; min-height: 30px; padding: 0; flex: none;
+    border-radius: 50%; border: 0; background: transparent; color: var(--muted); font-size: 17px; font-weight: 400;
+  }
+  .credits-toggle:hover { background: transparent; }
+  .credits-map:not(.open) .credits-text { display: none; }
+  .credits-map:not(.open) { background: color-mix(in srgb, var(--bg) 75%, transparent); }
+  .credits-map.open { padding-right: 10px; }
+  .credits-map.open .credits-text { font-size: 11px; line-height: 1.3; }
+  /* The scale bar adds clutter on a small screen. */
+  .maplibregl-ctrl-scale { display: none; }
+}

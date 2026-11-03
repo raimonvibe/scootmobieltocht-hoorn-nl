@@ -83,12 +83,22 @@ const NL_LOCALE = {
 
 // Map credits in Dutch. The tile service's own credit line is English and can't be translated,
 // so this replaces MapLibre's attribution control with the same sources.
+// On a phone it folds into a small ⓘ button (shown in full for a few seconds first, and always one tap away),
+// which keeps the map calm and still meets OpenStreetMap's attribution guidelines.
 class DutchCredits {
-  onAdd() {
+  onAdd(m) {
     this.el = document.createElement("div");
     this.el.className = "maplibregl-ctrl maplibregl-ctrl-attrib credits-map";
     this.el.setAttribute("translate", "no");
-    this.el.innerHTML = 'Kaart © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-bijdragers · © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · via <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>';
+    this.el.innerHTML = '<button type="button" class="credits-toggle" aria-expanded="true" aria-label="Bronvermelding van de kaart">ⓘ</button>' +
+      '<span class="credits-text">Kaart © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-bijdragers · © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · via <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a></span>';
+    const btn = this.el.querySelector(".credits-toggle");
+    const setOpen = (open) => { this.el.classList.toggle("open", open); btn.setAttribute("aria-expanded", open); };
+    btn.addEventListener("click", () => setOpen(!this.el.classList.contains("open")));
+    setOpen(true);
+    const fold = () => setOpen(false);
+    setTimeout(fold, 5000);
+    m.once("dragstart", fold);
     return this.el;
   }
   onRemove() { this.el.remove(); }
