@@ -806,11 +806,20 @@ $("addVia").addEventListener("click", () => {
 $("swap").addEventListener("click", swap);
 function swap() { stops.reverse(); renderStops(); plan(); }
 ["profile", "avoid"].forEach((id) => $(id).addEventListener("change", plan));
-["range", "retour", "battery"].forEach((id) => $(id).addEventListener("input", () => { safeSet(id, id === "retour" ? ($(id).checked ? "1" : "") : $(id).value); if (lastRoute) showResult(lastRoute); }));
+["range", "retour", "battery"].forEach((id) => $(id).addEventListener("input", () => { safeSet(id, id === "retour" ? ($(id).checked ? "1" : "") : $(id).value); updateRangeHint(); if (lastRoute) showResult(lastRoute); }));
+
+// Shows what the manufacturer's range turns into: the distance the battery estimate actually uses.
+function updateRangeHint() {
+  const range = +$("range").value || 30, share = +$("battery").value;
+  const safe = Math.round(range * share);
+  const text = `We rekenen met ongeveer ${safe} km: ${Math.round(share * 100)}% van ${range} km.`;
+  $("rangeHint").innerHTML = dualText(text);
+}
 $("vehicle").addEventListener("change", () => {
   const v = VEHICLES[$("vehicle").value];
   $("range").value = v.range;
   safeSet("vehicle", $("vehicle").value); safeSet("range", v.range);
+  updateRangeHint();
   if (lastRoute) showResult(lastRoute);
 });
 // Remember the rider's own scootmobiel between visits.
@@ -818,6 +827,7 @@ if (VEHICLES[safeGet("vehicle")]) $("vehicle").value = safeGet("vehicle");
 if (+safeGet("range") > 0) $("range").value = safeGet("range");
 if (safeGet("battery")) $("battery").value = safeGet("battery");
 $("retour").checked = safeGet("retour") === "1";
+updateRangeHint();
 
 // ---------- start from my location ----------
 $("locate").addEventListener("click", locate);
