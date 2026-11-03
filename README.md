@@ -32,6 +32,10 @@ Gebouwd naar het voorbeeld van [amsterdam-metro-v2](https://github.com/raimonvib
 - 📱 **Werkt op elk scherm**: op de telefoon een kaart op volle grootte met tabbladen "Kaart" en "Planner" en een routesamenvatting boven de kaart; op tablet en computer een zijpaneel
 - 🎬 Een **fly-in** bij het openen en **vijf kaartstijlen** (Kleur 3D, Helder, Licht, Donker, Fjord)
 
+## Delen op social media
+
+Wie de link deelt (WhatsApp, Facebook, LinkedIn, X), ziet een voorbeeld met de foto uit `public/img/delen.jpg` (1200×630). De teksten staan in de `og:`- en `twitter:`-tags bovenin `public/index.html`.
+
 ## Hoe het gratis blijft
 
 | Onderdeel | Waar | Kosten |

@@ -713,7 +713,7 @@ $("speak").addEventListener("click", () => {
   u.lang = "nl-NL";
   u.rate = 0.95;
   u.onend = u.onerror = () => ($("speak").textContent = "🔊 Voorlezen");
-  $("speak").textContent = "■ Stop voorlezen";
+  $("speak").textContent = "■ Stoppen met voorlezen";
   synth.speak(u);
 });
 
@@ -744,7 +744,7 @@ $("follow").addEventListener("click", toggleFollow);
 function toggleFollow() {
   if (follower.running) return stopFollow();
   if (!lastRoute) return;
-  $("follow").textContent = "■ Stop";
+  $("follow").textContent = "■ Stoppen";
   showMapOnPhone();
   follower.start(lastRoute.coords);
 }

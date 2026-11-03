@@ -37,8 +37,18 @@ export function describe(p) {
   if (p.w) bits.push(WHEEL[p.w] || "");
   if (p.c === "toilet" && p.f) bits.push(p.f === "no" ? "gratis" : "betaald");
   if (p.c === "bankje" && p.b) bits.push(p.b === "yes" ? "met rugleuning" : "zonder rugleuning");
-  if (p.h) bits.push(`open: ${p.h}`);
+  if (p.h) bits.push(`open: ${hoursNl(p.h)}`);
   return { title: p.n || c.one[0].toUpperCase() + c.one.slice(1), sub: c.one, bits: bits.filter(Boolean) };
+}
+
+// OpenStreetMap writes opening hours with English day names ("Mo-Sa 08:00-20:00; Su off").
+const DAYS = { Mo: "ma", Tu: "di", We: "wo", Th: "do", Fr: "vr", Sa: "za", Su: "zo", PH: "feestdagen", SH: "schoolvakanties" };
+function hoursNl(h) {
+  return h
+    .replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su|PH|SH)\b/g, (d) => DAYS[d])
+    .replace(/\boff\b|\bclosed\b/g, "gesloten")
+    .replace(/24\/7/g, "dag en nacht")
+    .replace(/;\s*/g, "; ");
 }
 
 // Distance (m) from a point to the nearest vertex of a line — fine for "is this near the route".

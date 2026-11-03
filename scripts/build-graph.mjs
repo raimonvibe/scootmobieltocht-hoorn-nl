@@ -98,7 +98,7 @@ const edges = [];
 // Kerbs and barriers sit on path nodes. Severity: 1 = usually passable but narrow/annoying, 2 = often impassable for a scootmobiel.
 const OBSTACLES = [
   ["paaltje", 1], ["hek", 1], ["slagboom", 1], ["betonblok", 1], ["stoeprand (onbekend)", 1], ["afgeronde stoeprand", 1],
-  ["hoge stoeprand", 2], ["klaphek / fietssluis", 2], ["draaihek", 2], ["overstap", 2], ["ketting", 2], ["kissing gate", 2],
+  ["hoge stoeprand", 2], ["klaphek / fietssluis", 2], ["draaihek", 2], ["overstap", 2], ["ketting", 2], ["zoenhekje", 2],
 ];
 function obstacleOf(t) {
   const kerb = t.kerb || (t.barrier === "kerb" ? "unknown" : "");
