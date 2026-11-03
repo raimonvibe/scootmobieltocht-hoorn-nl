@@ -22,7 +22,7 @@ const D = {
     "lang.label": "Taal",
     offline: "Je bent offline. Routes plannen werkt gewoon. De kaart kan stukken missen; het weer is van je laatste keer online.",
     "stops.legend": "Waar wil je heen?", locate: "Vanaf mijn locatie", locating: "Locatie zoeken…", addVia: "Tussenstop toevoegen", swap: "Route omdraaien", "swap.aria": "Van en naar omwisselen",
-    "stops.hint": "Kies een plaats of wijk, of tik op de kaart om een punt te zetten.",
+    "stops.hint": "Kies een plaats of wijk. Of tik op de kaart en kies of het je vertrekpunt of bestemming is.",
     "stop.from": "Vertrekpunt", "stop.to": "Bestemming", "stop.via": "Tussenstop {n}", "stop.change": "{label}: {value}. Tik om te wijzigen.", "stop.remove": "Verwijder {label}",
     "result.title": "Jouw route", "stat.dist": "afstand", "stat.time": "rijtijd", "stat.arrive": "aankomsttijd", "stat.back": "weer thuis om",
     speak: "Voorlezen", "speak.stop": "Stoppen met voorlezen", toilet: "Toilet onderweg", share: "Deel route", more: "Meer over deze route",
@@ -49,7 +49,7 @@ const D = {
     "picker.count": { one: "{n} resultaat", other: "{n} resultaten" },
     "help.title": "Hoe werkt het?", "help.closeAria": "Uitleg sluiten", "help.close": "Sluiten",
     "help.plan": "Een route plannen",
-    "help.plan.p1": "Tik bij <strong>Vertrekpunt</strong> en <strong>Bestemming</strong> en kies een plaats of wijk. Je kunt ook typen om te zoeken. Of tik op de kaart om een punt te zetten. De route verschijnt meteen.",
+    "help.plan.p1": "Tik bij <strong>Vertrekpunt</strong> en <strong>Bestemming</strong> en kies een plaats of wijk. Je kunt ook typen om te zoeken. Of tik op de kaart en kies <strong>Vertrekpunt (A)</strong> of <strong>Bestemming (B)</strong>. De route verschijnt meteen.",
     "help.plan.p2": "Met <strong>Vanaf mijn locatie</strong> begint de route waar je nu bent.",
     "help.plan.p3": "Op de telefoon schuift het paneel over de kaart. Met de pijltjes bovenaan maak je het groter of kleiner. <strong>Hele route</strong> op de kaart laat de hele route zien.",
     "help.colors": "De kleuren van de route",
@@ -85,7 +85,7 @@ const D = {
     "obs.hardCount": { one: "{n} daarvan is vaak lastig voor een scootmobiel (rood).", other: "{n} daarvan zijn vaak lastig voor een scootmobiel (rood)." },
     "obs.noWay": "Er is geen route zonder.", "obs.turnOn": "Zet \"Vermijd hekjes\" aan voor een route eromheen.", "obs.show": "Toon {label}",
     // popups
-    "pop.via": "Als tussenstop", "pop.to": "Als bestemming", "pop.blockQ": "Kon je hier niet langs?", "pop.block": "Vermijd dit stuk", "pop.report": "Meld op OpenStreetMap",
+    "pop.via": "Als tussenstop", "pop.to": "Als bestemming", "pop.from": "Vertrekpunt (A)", "pop.toB": "Bestemming (B)", "pop.blockQ": "Kon je hier niet langs?", "pop.block": "Vermijd dit stuk", "pop.report": "Meld op OpenStreetMap",
     "blocked.info": { one: "Je vermijdt {n} stuk dat je zelf hebt aangegeven.", other: "Je vermijdt {n} stukken die je zelf hebt aangegeven." }, "blocked.reset": "Alles terugzetten",
     "blocked.done": "Dit stuk wordt voortaan vermeden. Terugzetten kan onder Meer instellingen.",
     // planning and results

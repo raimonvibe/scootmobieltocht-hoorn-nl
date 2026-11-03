@@ -314,12 +314,31 @@ map.on("click", (ev) => {
   if (hit) return showPopup(hit);
   const s = router.snap(ev.lngLat.lng, ev.lngLat.lat);
   if (!s) return say(t("msg.noPath"), { icon: "alert", tone: "sun" });
-  stops[activeStop] = { lon: +s.point[0].toFixed(5), lat: +s.point[1].toFixed(5), name: placeName(s.point[0], s.point[1]) };
-  // Next click fills the next stop; the last one keeps moving the destination.
-  activeStop = Math.min(activeStop + 1, stops.length - 1);
-  renderStops();
-  plan();
+  showPointChoice(s.point);
 });
+
+// A tap on the map asks what the point is: start (A), destination (B) or an extra stop.
+function showPointChoice(pt) {
+  popup?.remove();
+  const name = placeName(pt[0], pt[1]);
+  const stop = { lon: +pt[0].toFixed(5), lat: +pt[1].toFixed(5), name };
+  const el = document.createElement("div");
+  el.className = "pop";
+  el.innerHTML = `<strong>${markNames(esc(name))}</strong>
+    <div class="row"><button type="button" data-a="from">${t("pop.from")}</button><button type="button" class="ghost" data-a="to">${t("pop.toB")}</button>
+    <button type="button" class="ghost" data-a="via">${t("pop.via")}</button></div>`;
+  el.addEventListener("click", (e) => {
+    const a = e.target.closest("button")?.dataset.a;
+    if (!a) return;
+    if (a === "from") stops[0] = stop;
+    else if (a === "to") stops[stops.length - 1] = stop;
+    else stops.splice(stops.length - 1, 0, stop);
+    popup.remove();
+    renderStops(); plan();
+  });
+  popup = new maplibregl.Popup({ offset: 8, maxWidth: "280px" }).setLngLat(pt).setDOMContent(el).addTo(map);
+  el.querySelector("button").focus();
+}
 
 let popup = null;
 function showPopup(f) {
