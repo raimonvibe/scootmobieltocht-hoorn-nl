@@ -87,7 +87,8 @@ class DutchCredits {
   onAdd() {
     this.el = document.createElement("div");
     this.el.className = "maplibregl-ctrl maplibregl-ctrl-attrib credits-map";
-    this.el.innerHTML = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">© OpenMapTiles</a> · Kaartdata © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-bijdragers';
+    this.el.setAttribute("translate", "no");
+    this.el.innerHTML = 'Kaart © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-bijdragers · © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · via <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>';
     return this.el;
   }
   onRemove() { this.el.remove(); }
@@ -181,8 +182,10 @@ function ensureLayers() {
   map.addLayer({ id: "obstacles-label", type: "symbol", source: "obstacles", layout: { "text-field": "!", "text-size": 12, "text-font": ["Noto Sans Bold"], "text-allow-overlap": true }, paint: { "text-color": "#fff" } });
   map.addLayer({ id: "stops", type: "circle", source: "stops", paint: { "circle-radius": 9, "circle-color": ["get", "color"], "circle-stroke-color": "#fff", "circle-stroke-width": 2.5 } });
   map.addLayer({ id: "stops-label", type: "symbol", source: "stops", layout: { "text-field": ["get", "label"], "text-size": 11, "text-font": ["Noto Sans Bold"], "text-allow-overlap": true }, paint: { "text-color": "#fff" } });
-  map.addLayer({ id: "here-halo", type: "circle", source: "here", paint: { "circle-radius": 20, "circle-color": "#3b8bd4", "circle-opacity": 0.2 } });
-  map.addLayer({ id: "here", type: "circle", source: "here", paint: { "circle-radius": 8, "circle-color": "#3b8bd4", "circle-stroke-color": "#fff", "circle-stroke-width": 3 } });
+  // How accurate the found location is: a light circle in metres around the "Jij bent hier" marker.
+  map.addLayer({ id: "here-accuracy", type: "fill", source: "here", paint: { "fill-color": "#3b8bd4", "fill-opacity": 0.12 } });
+  map.addLayer({ id: "here-accuracy-line", type: "line", source: "here", paint: { "line-color": "#3b8bd4", "line-opacity": 0.5, "line-width": 1.5 } });
+  if (hereData) map.getSource("here").setData(hereData);
   map.addLayer({ id: "me-glow", type: "circle", source: "me", paint: { "circle-radius": 18, "circle-color": "#ffc94d", "circle-opacity": 0.25, "circle-blur": 0.6 } });
   map.addLayer({ id: "turn", type: "circle", source: "turn", paint: { "circle-radius": 11, "circle-color": "#e5604d", "circle-stroke-color": "#fff", "circle-stroke-width": 3 } });
   map.addLayer({ id: "turn-label", type: "symbol", source: "turn", layout: { "text-field": ["get", "label"], "text-size": 12, "text-font": ["Noto Sans Bold"], "text-offset": [0, 1.6], "text-anchor": "top", "text-allow-overlap": true }, paint: { "text-color": "#b23a2a", "text-halo-color": "#fff", "text-halo-width": 2 } });
@@ -769,6 +772,33 @@ $("retour").checked = safeGet("retour") === "1";
 
 // ---------- start from my location ----------
 $("locate").addEventListener("click", locate);
+
+// "Jij bent hier": an HTML marker (a dot with a soft pulse and a label), so it stays sharp and readable
+// on every screen and survives map-style switches. The accuracy circle is a map layer underneath.
+let hereMarker = null, hereData = null;
+function showHere(here, accuracy) {
+  if (map === noMap) return;
+  if (!hereMarker) {
+    const el = document.createElement("div");
+    el.className = "here-marker";
+    el.setAttribute("role", "img");
+    el.innerHTML = '<span class="here-label">Jij bent hier</span><span class="here-pulse"></span><span class="here-dot"></span>';
+    hereMarker = new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat(here).addTo(map);
+  } else hereMarker.setLngLat(here);
+  const acc = Math.min(Math.max(accuracy || 0, 0), 2000);
+  hereMarker.getElement().setAttribute("aria-label", `Jij bent hier${acc > 30 ? `, nauwkeurig tot op ongeveer ${Math.round(acc)} meter` : ""}`);
+  // Circle polygon for the accuracy; skipped when it's small enough not to matter.
+  const ring = [];
+  if (acc > 30) {
+    const k = 1 / (111320 * Math.cos((here[1] * Math.PI) / 180));
+    for (let i = 0; i <= 48; i++) {
+      const a = (i / 48) * Math.PI * 2;
+      ring.push([here[0] + Math.cos(a) * acc * k, here[1] + (Math.sin(a) * acc) / 110540]);
+    }
+  }
+  hereData = { type: "FeatureCollection", features: ring.length ? [{ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [ring] } }] : [] };
+  map.getSource("here")?.setData(hereData);
+}
 function locate() {
   if (!navigator.geolocation) return say("Je browser kan je locatie niet bepalen. Kies een dorp, of tik op de kaart.", { long: true });
   const btn = $("locate");
@@ -783,7 +813,7 @@ function locate() {
     if (!s || s.d > 500) {
       return say("Je bent buiten het gebied van deze kaart (Hoorn en omgeving). Kies een dorp als vertrekpunt, of tik op de kaart.", { long: true });
     }
-    map.getSource("here")?.setData({ type: "FeatureCollection", features: [point(here)] });
+    showHere(here, pos.coords.accuracy);
     stops[0] = { lon: +s.point[0].toFixed(5), lat: +s.point[1].toFixed(5), name: "Mijn locatie" };
     activeStop = 1;
     renderStops(); plan(); showMapOnPhone();

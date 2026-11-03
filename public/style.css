@@ -351,3 +351,33 @@ details.more .grid2 { margin-top: 6px; }
   .toast { left: 12px; right: 64px; width: auto; transform: none; font-size: 14px; }
   @keyframes toast-in { from { opacity: 0; transform: translateY(-10px); } }
 }
+
+/* ---------- "Jij bent hier" marker ---------- */
+.here-marker { position: relative; width: 22px; height: 22px; pointer-events: none; z-index: 3; }
+.here-dot {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: linear-gradient(135deg, #4aa3ec, #2f7fcf); border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / .35);
+}
+.here-pulse {
+  position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
+  background: rgb(59 139 212 / .35); animation: here-pulse 2s ease-out infinite;
+}
+@keyframes here-pulse { from { transform: scale(1); opacity: .9; } to { transform: scale(3.2); opacity: 0; } }
+.here-label {
+  position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+  white-space: nowrap; padding: 5px 11px; border-radius: 999px;
+  background: linear-gradient(135deg, #3b8bd4, #2f7fcf); color: #fff; font: 800 13px/1.2 "Nunito", system-ui, sans-serif;
+  box-shadow: 0 3px 10px rgb(0 0 0 / .25);
+}
+.here-label::after {
+  content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px;
+  border: 6px solid transparent; border-top-color: #2f7fcf;
+}
+@media (max-width: 760px) {
+  /* A bit bigger for fingers and outdoor light on a phone. */
+  .here-marker { width: 26px; height: 26px; }
+  .here-pulse { width: 26px; height: 26px; margin: -13px 0 0 -13px; }
+  .here-label { font-size: 14px; padding: 6px 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .here-pulse { animation: none; transform: scale(2); opacity: .35; } }
