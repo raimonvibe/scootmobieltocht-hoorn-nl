@@ -432,3 +432,8 @@ kbd { font: 700 0.875rem ui-monospace, monospace; border: 1px solid var(--line);
 }
 /* Long words (place names, links) never push the layout sideways; normal words are never split. */
 #panel, dialog { overflow-wrap: break-word; }
+
+/* "Geen internet onderweg?" list in the help */
+.offline-list { list-style: none; padding: 0; margin: 4px 0 8px; }
+.offline-list li { display: flex; gap: 10px; align-items: flex-start; }
+.offline-list .ic { margin-top: .15em; }

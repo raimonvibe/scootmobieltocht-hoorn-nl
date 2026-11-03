@@ -110,7 +110,7 @@
           <option value="liberty2d">Kleur (2D, plat)</option>
         </select>
       </label>
-      <p id="offline" class="offline" hidden>Je bent offline. Opgeslagen kaartdelen en routes werken nog.</p>
+      <p id="offline" class="offline" hidden>Je bent offline. Routes plannen werkt gewoon. De kaart kan stukken missen en het weer ontbreekt.</p>
     </header>
 
     <div id="plan" tabindex="-1">
@@ -284,7 +284,7 @@
 
     <section id="installHelp">
       <h3><svg class="ic violet" aria-hidden="true" focusable="false"><use href="#i-phone"/></svg> Op je beginscherm zetten</h3>
-      <p>Dan open je de planner met één tik, net als een app. Hij werkt ook als je onderweg geen internet hebt.</p>
+      <p>Dan open je de planner met één tik, net als een app.</p>
       <button type="button" id="installNow" hidden><svg class="ic white" aria-hidden="true" focusable="false"><use href="#i-phone"/></svg> Zet op mijn beginscherm</button>
       <ol class="install-steps" data-os="ios">
         <li><strong>iPhone of iPad:</strong> tik in Safari onderin op de <strong>Deel-knop</strong> (vierkantje met een pijl omhoog).</li>
@@ -294,6 +294,17 @@
         <li><strong>Android:</strong> tik in Chrome rechtsboven op de <strong>drie puntjes</strong>.</li>
         <li>Kies <strong>Toevoegen aan startscherm</strong> of <strong>App installeren</strong>.</li>
       </ol>
+    </section>
+
+    <section>
+      <h3><svg class="ic sky" aria-hidden="true" focusable="false"><use href="#i-map"/></svg> Geen internet onderweg?</h3>
+      <ul class="offline-list">
+        <li><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-check"/></svg> Routes plannen werkt gewoon, in het hele gebied.</li>
+        <li><svg class="ic teal" aria-hidden="true" focusable="false"><use href="#i-check"/></svg> De afstand, de rijtijd en de routebeschrijving staan er gewoon bij.</li>
+        <li><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-info"/></svg> De kaart laat alleen stukken zien die al eens op je scherm stonden.</li>
+        <li><svg class="ic sun" aria-hidden="true" focusable="false"><use href="#i-info"/></svg> Het weer is er dan niet.</li>
+      </ul>
+      <p><strong>Tip:</strong> open de planner één keer thuis met wifi en bekijk je route. Dan staat alles klaar voor onderweg.</p>
     </section>
 
     <section>
