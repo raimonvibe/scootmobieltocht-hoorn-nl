@@ -416,3 +416,30 @@ details.sources .credits { margin-top: 2px; font-size: 12px; }
 /* Text only for screen readers and the "Voorlezen" button (written-out units). */
 .sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .range-hint { font-weight: 700; color: var(--accent); }
+
+/* ---------- "Hoe werkt het?" ---------- */
+dialog.help { max-width: none; width: min(560px, calc(100vw - 24px)); max-height: min(86dvh, 900px); padding: 0; overflow: hidden; display: none; flex-direction: column; }
+dialog.help[open] { display: flex; }
+.help-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 16px 12px 20px; background: var(--g-header); border-bottom: 3px solid var(--sun); }
+.help-head h2 { margin: 0; font-size: 20px; }
+.help-head .icon { background: var(--card); }
+dialog.help > section, dialog.help > form { padding: 0 20px; }
+dialog.help { overflow-y: auto; }
+dialog.help > section { border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+dialog.help > section:last-of-type { border-bottom: 0; }
+dialog.help h3 { font-size: 17px; margin: 16px 0 6px; display: flex; align-items: center; gap: 8px; }
+dialog.help p, dialog.help li { font-size: 16px; line-height: 1.55; margin: 6px 0; }
+dialog.help > form:last-child { padding: 12px 20px 20px; position: sticky; bottom: 0; background: linear-gradient(transparent, var(--panel) 30%); }
+.help-close { width: 100%; background: var(--g-accent); border-color: transparent; font-size: 17px; }
+.help-legend { list-style: none; padding: 0; margin: 6px 0; }
+.help-legend li { display: flex; align-items: center; gap: 10px; }
+.help-legend i { flex: none; width: 28px; height: 8px; border-radius: 4px; }
+.help-legend i.dashed { background: repeating-linear-gradient(90deg, #9b7b55 0 6px, transparent 6px 10px); }
+.dot-help { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #fff; font-weight: 800; font-size: 13px; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); margin-right: 4px; vertical-align: -5px; }
+.install-steps { padding-left: 22px; }
+#installNow { width: 100%; margin: 6px 0; }
+/* Keyboard shortcuts: not on touch screens (phones, tablets), where there's no keyboard. */
+@media (pointer: coarse) { .keys-only { display: none; } }
+@media (max-width: 760px) {
+  dialog.help { width: 100vw; max-width: 100vw; max-height: 92dvh; margin: auto auto 0; border-radius: 20px 20px 0 0; }
+}

@@ -978,6 +978,27 @@ $("letterKeys").checked = safeGet("letterKeys") !== "off";
 $("letterKeys").addEventListener("change", () => safeSet("letterKeys", $("letterKeys").checked ? "on" : "off"));
 $("helpBtn").addEventListener("click", () => $("help").showModal());
 
+// ---------- help: install steps for this phone ----------
+// Chrome on Android offers a real install prompt; elsewhere the help shows the steps for this kind of phone.
+let installEvent = null;
+addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e; $("installNow").hidden = false; });
+$("installNow").addEventListener("click", async () => {
+  if (!installEvent) return;
+  installEvent.prompt();
+  const { outcome } = await installEvent.userChoice;
+  installEvent = null;
+  $("installNow").hidden = true;
+  if (outcome === "accepted") say("📲 De planner staat nu op je beginscherm.");
+});
+addEventListener("appinstalled", () => ($("installHelp").hidden = true));
+(function setupInstallHelp() {
+  const ua = navigator.userAgent;
+  const os = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? "ios" : /Android/.test(ua) ? "android" : "";
+  // On a known phone only its own steps; on a computer both, for whoever reads along.
+  document.querySelectorAll(".install-steps").forEach((ol) => (ol.hidden = !!os && ol.dataset.os !== os));
+  if (matchMedia("(display-mode: standalone)").matches || navigator.standalone) $("installHelp").hidden = true;
+})();
+
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") { if (follower.running) stopFollow(); popup?.remove(); return; }
   if (e.ctrlKey || e.metaKey || e.altKey || $("help").open) return;

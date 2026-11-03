@@ -44,7 +44,7 @@
     <header>
       <div class="titlebar">
         <h1>🛵 Scootmobiel <span translate="no">Hoorn</span></h1>
-        <button type="button" id="helpBtn" class="ghost icon" aria-label="Sneltoetsen en hulp" title="Sneltoetsen (?)">?</button>
+        <button type="button" id="helpBtn" class="ghost icon" aria-label="Hoe werkt het? Uitleg en hulp" title="Hoe werkt het?">?</button>
       </div>
       <p class="sub">Routes over fietspaden en rustige straten in <span translate="no">Hoorn</span> en omgeving. Zonder trappen, onverhard alleen als het moet.</p>
       <!-- translate="no": the style names stay Dutch even when the browser translates the page. -->
@@ -183,21 +183,82 @@
     <button type="button" data-view="plan" aria-pressed="false">🧭 Planner</button>
   </nav>
 
-  <dialog id="help" aria-labelledby="helpTitle">
-    <h2 id="helpTitle">Sneltoetsen</h2>
-    <dl class="keys">
-      <dt><kbd>/</kbd></dt><dd>Naar het veld "Van"</dd>
-      <dt><kbd>V</kbd></dt><dd>Volg route starten of stoppen</dd>
-      <dt><kbd>O</kbd></dt><dd>Route omdraaien</dd>
-      <dt><kbd>T</kbd></dt><dd>Toilet onderweg toevoegen</dd>
-      <dt><kbd>B</kbd></dt><dd>Route bewaren als favoriet</dd>
-      <dt><kbd>K</kbd></dt><dd>Volgende kaartstijl</dd>
-      <dt><kbd>?</kbd></dt><dd>Deze hulp</dd>
-      <dt><kbd>Esc</kbd></dt><dd>Stoppen met volgen, venster sluiten</dd>
-    </dl>
-    <label class="check"><input id="letterKeys" type="checkbox" checked /> Lettertoetsen gebruiken (zet uit als je spraakbesturing gebruikt)</label>
-    <p class="hint">Installeer de site als app (in het browsermenu: "Installeren" of "Zet op beginscherm"). Na één bezoek werkt hij ook zonder internet, voor de stukken kaart die je al hebt bekeken.</p>
-    <form method="dialog"><button>Sluiten</button></form>
+  <dialog id="help" class="help" aria-labelledby="helpTitle">
+    <div class="help-head">
+      <h2 id="helpTitle">Hoe werkt het?</h2>
+      <form method="dialog"><button class="ghost icon" aria-label="Uitleg sluiten">✕</button></form>
+    </div>
+
+    <section>
+      <h3><span aria-hidden="true">🧭</span> Een route plannen</h3>
+      <p>Kies bij <strong>Van</strong> en <strong>Naar</strong> een dorp of wijk. Of tik op de kaart om een punt te zetten. De route verschijnt meteen.</p>
+      <p>Met <strong>📍 Vanaf mijn locatie</strong> begint de route waar je nu bent.</p>
+    </section>
+
+    <section>
+      <h3><span aria-hidden="true">🎨</span> De kleuren van de route</h3>
+      <ul class="help-legend">
+        <li><i style="background:#1f9e6e"></i> Fietspad: rustig en meestal breed</li>
+        <li><i style="background:#3b8bd4"></i> Woonstraat: rustig</li>
+        <li><i style="background:#f2a33a"></i> Doorgaande weg: let op het verkeer</li>
+        <li><i style="background:#e0523f"></i> Drukke weg: liever vermijden</li>
+        <li><i class="dashed"></i> Gestippeld: onverhard</li>
+      </ul>
+      <p><span class="dot-help" style="background:#f2a33a">!</span> Oranje: een paaltje of hek, meestal te passeren.<br />
+         <span class="dot-help" style="background:#e0523f">!</span> Rood: een klaphek of hoge stoeprand, vaak niet te passeren.</p>
+    </section>
+
+    <section>
+      <h3><span aria-hidden="true">🔋</span> Je accu</h3>
+      <p>Het percentage laat zien hoeveel van je accu de rit ongeveer kost. Wind, kou en de leeftijd van je accu tellen mee. Stel je eigen scootmobiel in onder <strong>Mijn scootmobiel</strong>.</p>
+      <p>Zie je een <strong>rode stip "Keer hier om"</strong> op de kaart? Dan is de rit te lang voor één acculading. Keer daar om, of zoek onderweg een plek om te laden.</p>
+    </section>
+
+    <section>
+      <h3><span aria-hidden="true">🚧</span> Kon je ergens niet langs?</h3>
+      <p>Tik op dat stuk van de route en kies <strong>Vermijd dit stuk</strong>. De planner gaat er dan voortaan omheen. Terugzetten kan onder <strong>Meer instellingen</strong>.</p>
+    </section>
+
+    <section>
+      <h3><span aria-hidden="true">🔊</span> Onderweg</h3>
+      <p><strong>Voorlezen</strong> leest de route hardop voor. <strong>Toilet onderweg</strong> zoekt het dichtstbijzijnde openbare toilet en zet het als tussenstop in je route.</p>
+    </section>
+
+    <section id="installHelp">
+      <h3><span aria-hidden="true">📲</span> Op je beginscherm zetten</h3>
+      <p>Dan open je de planner met één tik, net als een app. Hij werkt ook als je onderweg geen internet hebt.</p>
+      <button type="button" id="installNow" hidden>📲 Zet op mijn beginscherm</button>
+      <ol class="install-steps" data-os="ios">
+        <li><strong>iPhone of iPad:</strong> tik in Safari onderin op de <strong>Deel-knop</strong> (vierkantje met een pijl omhoog).</li>
+        <li>Kies <strong>Zet op beginscherm</strong> en tik op <strong>Voeg toe</strong>.</li>
+      </ol>
+      <ol class="install-steps" data-os="android">
+        <li><strong>Android:</strong> tik in Chrome rechtsboven op de <strong>drie puntjes</strong>.</li>
+        <li>Kies <strong>Toevoegen aan startscherm</strong> of <strong>App installeren</strong>.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h3><span aria-hidden="true">📍</span> Lukt je locatie niet?</h3>
+      <p>Geef de site toestemming als je telefoon daarom vraagt. Zei je eerder nee? Tik dan op het slotje naast het webadres en zet <strong>Locatie</strong> aan. Op een laptop of computer lukt het vaak niet, want die heeft geen gps. Kies dan een dorp, of tik op de kaart.</p>
+    </section>
+
+    <section class="keys-only">
+      <h3><span aria-hidden="true">⌨</span> Sneltoetsen (met een toetsenbord)</h3>
+      <dl class="keys">
+        <dt><kbd>/</kbd></dt><dd>Naar het veld "Van"</dd>
+        <dt><kbd>V</kbd></dt><dd>Volg route starten of stoppen</dd>
+        <dt><kbd>O</kbd></dt><dd>Route omdraaien</dd>
+        <dt><kbd>T</kbd></dt><dd>Toilet onderweg toevoegen</dd>
+        <dt><kbd>B</kbd></dt><dd>Route bewaren als favoriet</dd>
+        <dt><kbd>K</kbd></dt><dd>Volgende kaartstijl</dd>
+        <dt><kbd>?</kbd></dt><dd>Deze uitleg</dd>
+        <dt><kbd>Esc</kbd></dt><dd>Stoppen met volgen, venster sluiten</dd>
+      </dl>
+      <label class="check"><input id="letterKeys" type="checkbox" checked /> Lettertoetsen gebruiken (zet uit als je spraakbesturing gebruikt)</label>
+    </section>
+
+    <form method="dialog"><button class="help-close">Sluiten</button></form>
   </dialog>
 
   <script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
