@@ -30,6 +30,18 @@ const BLOCKED_KEY = "scootmobiel-blocked";
 const $ = (id) => document.getElementById(id);
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const status = (msg) => ($("status").textContent = msg);
+// Feedback on something the rider just did: a message at the top of the screen, visible on every
+// screen size (the status line at the bottom of the panel is easy to miss, especially on a phone).
+let toastTimer = 0;
+function say(msg, { long = false } = {}) {
+  status(msg);
+  const t = $("toast");
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (t.hidden = true), long ? 9000 : 4500);
+}
+$("toast").addEventListener("click", () => ($("toast").hidden = true));
 
 let router, places = [], pois = [], lastRoute = null, activeStop = 0, weather = null, flownIn = false;
 // A stop is { place } (a village name) or { lon, lat, name? } (a clicked point or a place on the map).
@@ -138,6 +150,7 @@ function ensureLayers() {
   map.addSource("stops", { type: "geojson", data: empty() });
   map.addSource("me", { type: "geojson", data: empty() });
   map.addSource("turn", { type: "geojson", data: empty() });
+  map.addSource("here", { type: "geojson", data: empty() });
   map.addSource("obstacles", { type: "geojson", data: empty() });
   map.addSource("allObstacles", { type: "geojson", data: { type: "FeatureCollection", features: [...router.obsByEdge.values()].flat().map((o) => point([o.lon, o.lat], { label: o.label, hard: o.hard ? 1 : 0 })) } });
   map.addSource("pois", { type: "geojson", data: { type: "FeatureCollection", features: pois.map((p, i) => point([p.lon, p.lat], { c: p.c, i })) } });
@@ -155,7 +168,7 @@ function ensureLayers() {
   for (const cat of Object.keys(CATS)) {
     map.addLayer({
       id: `poi-${cat}`, type: "symbol", source: "pois", filter: ["==", ["get", "c"], cat], minzoom: CATS[cat].small ? 14 : 11,
-      layout: { "icon-image": `poi-${cat}`, "icon-size": 0.5, "icon-allow-overlap": !CATS[cat].small, visibility: poiOn(cat) ? "visible" : "none" },
+      layout: { "icon-image": `poi-${cat}`, "icon-size": CATS[cat].small ? 0.6 : 0.85, "icon-allow-overlap": !CATS[cat].small, "icon-ignore-placement": !CATS[cat].small, visibility: poiOn(cat) ? "visible" : "none" },
     });
   }
 
@@ -163,6 +176,8 @@ function ensureLayers() {
   map.addLayer({ id: "obstacles-label", type: "symbol", source: "obstacles", layout: { "text-field": "!", "text-size": 12, "text-font": ["Noto Sans Bold"], "text-allow-overlap": true }, paint: { "text-color": "#fff" } });
   map.addLayer({ id: "stops", type: "circle", source: "stops", paint: { "circle-radius": 9, "circle-color": ["get", "color"], "circle-stroke-color": "#fff", "circle-stroke-width": 2.5 } });
   map.addLayer({ id: "stops-label", type: "symbol", source: "stops", layout: { "text-field": ["get", "label"], "text-size": 11, "text-font": ["Noto Sans Bold"], "text-allow-overlap": true }, paint: { "text-color": "#fff" } });
+  map.addLayer({ id: "here-halo", type: "circle", source: "here", paint: { "circle-radius": 20, "circle-color": "#3b8bd4", "circle-opacity": 0.2 } });
+  map.addLayer({ id: "here", type: "circle", source: "here", paint: { "circle-radius": 8, "circle-color": "#3b8bd4", "circle-stroke-color": "#fff", "circle-stroke-width": 3 } });
   map.addLayer({ id: "me-glow", type: "circle", source: "me", paint: { "circle-radius": 18, "circle-color": "#ffc94d", "circle-opacity": 0.25, "circle-blur": 0.6 } });
   map.addLayer({ id: "turn", type: "circle", source: "turn", paint: { "circle-radius": 11, "circle-color": "#e5604d", "circle-stroke-color": "#fff", "circle-stroke-width": 3 } });
   map.addLayer({ id: "turn-label", type: "symbol", source: "turn", layout: { "text-field": ["get", "label"], "text-size": 12, "text-font": ["Noto Sans Bold"], "text-offset": [0, 1.6], "text-anchor": "top", "text-allow-overlap": true }, paint: { "text-color": "#b23a2a", "text-halo-color": "#fff", "text-halo-width": 2 } });
@@ -192,7 +207,7 @@ map.on("click", (ev) => {
   if (hit?.layer.id.startsWith("route-")) return showRoutePopup(ev.lngLat);
   if (hit) return showPopup(hit);
   const s = router.snap(ev.lngLat.lng, ev.lngLat.lat);
-  if (!s) return status("Daar is geen pad in de buurt.");
+  if (!s) return say("Daar is geen pad in de buurt.");
   stops[activeStop] = { lon: +s.point[0].toFixed(5), lat: +s.point[1].toFixed(5) };
   // Next click fills the next stop; the last one keeps moving the destination.
   activeStop = Math.min(activeStop + 1, stops.length - 1);
@@ -251,7 +266,7 @@ function showRoutePopup(ll) {
     safeSet(BLOCKED_KEY, JSON.stringify(list));
     popup.remove();
     renderBlockedInfo();
-    status("Dit stuk wordt voortaan vermeden. Terugzetten kan onder Meer instellingen.");
+    say("Dit stuk wordt voortaan vermeden. Terugzetten kan onder Meer instellingen.");
     plan();
   });
   popup = new maplibregl.Popup({ offset: 8, maxWidth: "270px" }).setLngLat(s.point).setDOMContent(el).addTo(map);
@@ -291,12 +306,12 @@ function plan() {
   if (coords.some((c) => !c)) return;
   const prof = $("profile").value, avoid = $("avoid").checked, blocked = blockedEdges();
   const snaps = coords.map((c) => router.snap(c[0], c[1]));
-  if (snaps.some((s) => !s)) return status("Een van de punten ligt te ver van een pad.");
+  if (snaps.some((s) => !s)) return say("Een van de punten ligt te ver van een pad.");
   const t0 = performance.now();
   const legs = [];
   for (let i = 0; i < snaps.length - 1; i++) {
     const r = router.route(snaps[i], snaps[i + 1], prof, avoid, blocked);
-    if (!r) return status(`Geen route gevonden tussen ${stopLabel(stops[i])} en ${stopLabel(stops[i + 1])}.`);
+    if (!r) return say(`Geen route gevonden tussen ${stopLabel(stops[i])} en ${stopLabel(stops[i + 1])}.`);
     legs.push(r);
   }
   const legStarts = [];
@@ -341,7 +356,8 @@ function drawStops() {
 function fit(coords) {
   const b = new maplibregl.LngLatBounds(coords[0], coords[0]);
   coords.forEach((c) => b.extend(c));
-  const padding = innerWidth < 760 ? 30 : 60;
+  // On a phone, keep the route clear of the message at the top and the summary card at the bottom.
+  const padding = innerWidth <= 760 ? { top: 70, bottom: 150, left: 30, right: 60 } : 60;
   if (!flownIn && !reduceMotion) {
     // First route of the visit: a slow, tilted fly-in.
     flownIn = true;
@@ -562,13 +578,13 @@ function addToilet() {
     const score = d * (p.w === "yes" ? 0.6 : 1);
     if (!best || score < best.score) best = { p, d, at, score };
   }
-  if (!best || best.d > 3000) return status("Geen openbaar toilet bekend in de buurt van deze route.");
+  if (!best || best.d > 3000) return say("Er is geen openbaar toilet bekend in de buurt van deze route.");
   const leg = lastRoute.legStarts.filter((s) => s <= best.at).length - 1;
   const name = best.p.n ? `Toilet: ${best.p.n}` : best.p.w === "yes" ? "Rolstoeltoilet" : "Openbaar toilet";
   stops.splice(leg + 1, 0, { lon: best.p.lon, lat: best.p.lat, name });
-  status(`Tussenstop toegevoegd: ${name} (${Math.round(best.d)} m van de route).`);
   renderStops();
   plan();
+  say(`🚻 Tussenstop toegevoegd: ${name}, ${Math.round(best.d)} m van je route. Het nummer op de kaart wijst het aan.`, { long: true });
   showMapOnPhone();
 }
 
@@ -624,7 +640,25 @@ function renderPoiToggles() {
     const cat = el.dataset.cat;
     safeSet(`poi-${cat}`, el.checked ? "1" : "0");
     if (map.getLayer(`poi-${cat}`)) map.setLayoutProperty(`poi-${cat}`, "visibility", el.checked ? "visible" : "none");
+    if (el.checked) showPlaces(cat);
   }));
+}
+
+// After switching a kind of place on: say how many there are, and if none are in view, show the nearest.
+function showPlaces(cat) {
+  const all = pois.filter((p) => p.c === cat);
+  const c = CATS[cat];
+  if (!all.length) return say(`Er zijn geen ${c.label.toLowerCase()} bekend in dit gebied.`);
+  if (map === noMap) return say(`${all.length} ${c.label.toLowerCase()} bekend in dit gebied.`);
+  const b = map.getBounds();
+  const inView = all.filter((p) => b.contains([p.lon, p.lat])).length;
+  if (inView) return say(`${inView} ${inView === 1 ? c.one : c.label.toLowerCase()} in beeld (${all.length} in het hele gebied).`);
+  const ctr = map.getCenter();
+  const near = all.reduce((x, p) => (haversine([ctr.lng, ctr.lat], [p.lon, p.lat]) < haversine([ctr.lng, ctr.lat], [x.lon, x.lat]) ? p : x));
+  const km = haversine([ctr.lng, ctr.lat], [near.lon, near.lat]) / 1000;
+  const bb = new maplibregl.LngLatBounds([ctr.lng, ctr.lat], [ctr.lng, ctr.lat]).extend([near.lon, near.lat]);
+  map.fitBounds(bb, { padding: 80, maxZoom: 15, duration: reduceMotion ? 0 : 900 });
+  say(`Geen ${c.label.toLowerCase()} in dit stuk van de kaart. De kaart schuift naar de dichtstbijzijnde (${km.toFixed(1).replace(".", ",")} km).`, { long: true });
 }
 
 // ---------- favourites and recent ----------
@@ -637,12 +671,12 @@ function updateSaveButton() {
 $("save").addEventListener("click", saveFavourite);
 function saveFavourite() {
   if (!lastRoute) return;
-  if (saved.isFavourite(location.hash)) { saved.removeFavourite(location.hash); status("Uit je favorieten gehaald."); }
+  if (saved.isFavourite(location.hash)) { saved.removeFavourite(location.hash); say("Uit je favorieten gehaald."); }
   else {
     const name = prompt("Naam voor deze route:", routeName());
     if (name === null) return;
     saved.addFavourite(name.trim() || routeName(), location.hash);
-    status("Bewaard bij Mijn routes (alleen in deze browser).");
+    say("⭐ Bewaard bij Mijn routes (alleen in deze browser).");
   }
   updateSaveButton();
   renderSaved();
@@ -688,22 +722,45 @@ if (safeGet("battery")) $("battery").value = safeGet("battery");
 $("retour").checked = safeGet("retour") === "1";
 
 // ---------- start from my location ----------
-$("locate").addEventListener("click", () => {
-  if (!navigator.geolocation) return status("Je browser kan je locatie niet bepalen.");
-  status("Locatie zoeken…");
-  navigator.geolocation.getCurrentPosition((pos) => {
-    const s = router?.snap(pos.coords.longitude, pos.coords.latitude);
-    if (!s || s.d > 500) return status("Je bent buiten het gebied van deze kaart (Hoorn en omgeving).");
+$("locate").addEventListener("click", locate);
+function locate() {
+  if (!navigator.geolocation) return say("Je browser kan je locatie niet bepalen. Kies een dorp, of tik op de kaart.", { long: true });
+  const btn = $("locate");
+  btn.disabled = true;
+  btn.textContent = "📍 Locatie zoeken…";
+  say("📍 Je locatie wordt gezocht…");
+  const done = () => { btn.disabled = false; btn.textContent = "📍 Vanaf mijn locatie"; };
+  const ok = (pos) => {
+    done();
+    const here = [pos.coords.longitude, pos.coords.latitude];
+    const s = router?.snap(here[0], here[1]);
+    if (!s || s.d > 500) {
+      return say("Je bent buiten het gebied van deze kaart (Hoorn en omgeving). Kies een dorp als vertrekpunt, of tik op de kaart.", { long: true });
+    }
+    map.getSource("here")?.setData({ type: "FeatureCollection", features: [point(here)] });
     stops[0] = { lon: +s.point[0].toFixed(5), lat: +s.point[1].toFixed(5), name: "Mijn locatie" };
     activeStop = 1;
-    renderStops(); plan();
-  }, () => status("Je locatie is niet beschikbaar. Geef de site toestemming, of kies een dorp."), { enableHighAccuracy: true, timeout: 10000 });
-});
+    renderStops(); plan(); showMapOnPhone();
+    say(`📍 Gevonden! Je route begint nu bij jou${pos.coords.accuracy > 200 ? ` (nauwkeurig tot op ca. ${Math.round(pos.coords.accuracy / 100) / 10} km)` : ""}.`);
+  };
+  // Laptops have no GPS; they ask the browser to guess from wifi. On Linux that often fails
+  // (Firefox's location service stopped in 2024; many Chromium builds have none), so explain it.
+  const fail = (err) => {
+    done();
+    if (err.code === 1) return say("Je hebt de site geen toestemming gegeven voor je locatie. Dat kun je aanzetten via het slotje naast het webadres.", { long: true });
+    say("Je locatie kon niet worden bepaald. Op een laptop of computer lukt dat vaak niet, want die heeft geen gps. Op je telefoon werkt het wel. Kies hier een dorp, of tik op de kaart.", { long: true });
+  };
+  // First a quick, rough fix (also accepts a recent known position), then GPS-quality if that fails.
+  navigator.geolocation.getCurrentPosition(ok, (err) => {
+    if (err.code === 1) return fail(err);
+    navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 120000 });
+}
 
 // ---------- read the route aloud ----------
 $("speak").addEventListener("click", () => {
   const synth = window.speechSynthesis;
-  if (!synth) return status("Voorlezen werkt niet in deze browser.");
+  if (!synth) return say("Voorlezen werkt niet in deze browser.");
   if (synth.speaking) { synth.cancel(); $("speak").textContent = "🔊 Voorlezen"; return; }
   const text = [`Route van ${stopLabel(stops[0])} naar ${stopLabel(stops[stops.length - 1])}.`,
     `${$("rDist").textContent.replace(",", " komma ")}, ongeveer ${$("rTime").textContent.replace(" u ", " uur ")}.`,
@@ -753,8 +810,8 @@ function stopFollow() { follower.stop(); $("follow").textContent = "▶ Volg rou
 // ---------- share ----------
 $("share").addEventListener("click", async () => {
   writeHash();
-  try { await navigator.clipboard.writeText(location.href); status("Link gekopieerd."); }
-  catch { status("Kopieer de link uit de adresbalk."); }
+  try { await navigator.clipboard.writeText(location.href); say("🔗 Link gekopieerd. Plak hem in een bericht of mail."); }
+  catch { say("Kopieer de link uit de adresbalk."); }
 });
 
 // URL hash: #r=Hoorn|52.65,5.05|52.66,5.07,Toilet%3A%20Stadhuis&p=rustig&h=1 — no server needed to share a route.
