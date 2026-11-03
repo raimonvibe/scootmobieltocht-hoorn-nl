@@ -456,3 +456,6 @@ input[type="radio"] { width: 22px; height: 22px; accent-color: var(--accent); fl
 .overview-ctl button { width: auto !important; height: auto !important; min-height: 44px; padding: 6px 12px 6px 10px; display: inline-flex; gap: 6px; align-items: center; font: 800 0.9375rem/1.2 "Nunito", "Noto Sans", sans-serif; color: var(--ink); background: var(--card); border: 0; border-radius: 14px; }
 .overview-ctl button .ic { width: 1.3em; height: 1.3em; }
 @media (max-width: 360px) { .overview-ctl .lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } }
+
+/* "Mijn scootmobiel": the two choices under each other, so their text always fits. */
+fieldset.grid2 { grid-template-columns: 1fr; }
