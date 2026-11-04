@@ -22,7 +22,8 @@ const D = {
     "lang.label": "Taal",
     offline: "Je bent offline. Routes plannen werkt gewoon. De kaart kan stukken missen; het weer is van je laatste keer online.",
     "stops.legend": "Waar wil je heen?", locate: "Vanaf mijn locatie", locating: "Locatie zoeken…", addVia: "Tussenstop toevoegen", swap: "Route omdraaien", "swap.aria": "Van en naar omwisselen",
-    "stops.hint": "Kies een plaats of wijk. Of tik op de kaart en kies of het je vertrekpunt of bestemming is.",
+    "stops.hint": "Kies een plaats of wijk. Of tik op de kaart op A of B, en daarna op de plek waar die moet komen.",
+    "move.hint": "Tik op de kaart waar {label} moet komen. Tik nog eens op {label} om te stoppen.", "move.first": "Wil je A of B verplaatsen? Tik eerst op A of B op de kaart, en daarna op de nieuwe plek.",
     "stop.from": "Vertrekpunt", "stop.to": "Bestemming", "stop.via": "Tussenstop {n}", "stop.change": "{label}: {value}. Tik om te wijzigen.", "stop.remove": "Verwijder {label}",
     "result.title": "Jouw route", "stat.dist": "afstand", "stat.time": "rijtijd", "stat.arrive": "aankomsttijd", "stat.back": "weer thuis om",
     speak: "Voorlezen", "speak.stop": "Stoppen met voorlezen", toilet: "Toilet onderweg", share: "Deel route", more: "Meer over deze route",
@@ -49,7 +50,7 @@ const D = {
     "picker.count": { one: "{n} resultaat", other: "{n} resultaten" },
     "help.title": "Hoe werkt het?", "help.closeAria": "Uitleg sluiten", "help.close": "Sluiten",
     "help.plan": "Een route plannen",
-    "help.plan.p1": "Tik bij <strong>Vertrekpunt</strong> en <strong>Bestemming</strong> en kies een plaats of wijk. Je kunt ook typen om te zoeken. Of tik op de kaart en kies <strong>Vertrekpunt (A)</strong> of <strong>Bestemming (B)</strong>. De route verschijnt meteen.",
+    "help.plan.p1": "Tik bij <strong>Vertrekpunt</strong> en <strong>Bestemming</strong> en kies een plaats of wijk. Je kunt ook typen om te zoeken. Of tik op de kaart op het groene <strong>A</strong> of het rode <strong>B</strong>, en daarna op de plek waar die moet komen. De route verschijnt meteen.",
     "help.plan.p2": "Met <strong>Vanaf mijn locatie</strong> begint de route waar je nu bent.",
     "help.plan.p3": "Op de telefoon schuift het paneel over de kaart. Met de pijltjes bovenaan maak je het groter of kleiner. <strong>Hele route</strong> op de kaart laat de hele route zien.",
     "help.colors": "De kleuren van de route",
@@ -74,7 +75,7 @@ const D = {
     "key.slash": "Plaats zoeken voor het vertrekpunt", "key.v": "Volg route starten of stoppen", "key.o": "Route omdraaien", "key.t": "Toilet onderweg toevoegen", "key.b": "Route bewaren als favoriet", "key.k": "Volgende kaartstijl", "key.q": "Deze uitleg", "key.esc": "Stoppen met volgen, venster sluiten",
     letterKeys: "Lettertoetsen gebruiken (zet uit als je spraakbesturing gebruikt)",
     // map controls
-    "ctl.zoomIn": "Inzoomen", "ctl.zoomOut": "Uitzoomen", "ctl.north": "Kaart naar het noorden draaien", "ctl.locate": "Mijn locatie zoeken", "ctl.credits": "Bronvermelding van de kaart", "ctl.noLocation": "Locatie niet beschikbaar",
+    "ctl.zoomIn": "Inzoomen", "ctl.zoomOut": "Uitzoomen", "ctl.north": "Kaart plat en naar het noorden draaien", "ctl.tilt": "Kaart weer schuin zetten (3D)", "ctl.locate": "Mijn locatie zoeken", "ctl.credits": "Bronvermelding van de kaart", "ctl.noLocation": "Locatie niet beschikbaar",
     "credits.map": "Kaart © {osm}-bijdragers · © {omt} · via {ofm}",
     // route types and obstacles
     cls0: "fietspad", cls1: "voetpad", cls2: "woonstraat", cls3: "erf/ventweg", cls4: "doorgaande weg", cls5: "drukke weg", cls6: "landweg",
@@ -85,7 +86,7 @@ const D = {
     "obs.hardCount": { one: "{n} daarvan is vaak lastig voor een scootmobiel (rood).", other: "{n} daarvan zijn vaak lastig voor een scootmobiel (rood)." },
     "obs.noWay": "Er is geen route zonder.", "obs.turnOn": "Zet \"Vermijd hekjes\" aan voor een route eromheen.", "obs.show": "Toon {label}",
     // popups
-    "pop.via": "Als tussenstop", "pop.to": "Als bestemming", "pop.from": "Vertrekpunt (A)", "pop.toB": "Bestemming (B)", "pop.blockQ": "Kon je hier niet langs?", "pop.block": "Vermijd dit stuk", "pop.report": "Meld op OpenStreetMap",
+    "pop.via": "Als tussenstop", "pop.to": "Als bestemming", "pop.blockQ": "Kon je hier niet langs?", "pop.block": "Vermijd dit stuk", "pop.report": "Meld op OpenStreetMap",
     "blocked.info": { one: "Je vermijdt {n} stuk dat je zelf hebt aangegeven.", other: "Je vermijdt {n} stukken die je zelf hebt aangegeven." }, "blocked.reset": "Alles terugzetten",
     "blocked.done": "Dit stuk wordt voortaan vermeden. Terugzetten kan onder Meer instellingen.",
     // planning and results

@@ -161,10 +161,40 @@ try {
   map.addControl(new maplibregl.GeolocateControl({ trackUserLocation: false }), "top-right");
   map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
   map.addControl(new OverviewControl(), "top-right");
+  compassToggle();
 } catch {
   map = noMap;
   $("map").innerHTML = `<p class="nomap">${t("nomap")}</p>`;
   $("follow").hidden = true;
+}
+
+// MapLibre's compass only turns the map flat and to the north. Here a second tap brings back
+// the tilted view it came from (or the usual 3D tilt), so the 3D buildings are one tap away again.
+function compassToggle() {
+  const btn = map.getContainer().querySelector(".maplibregl-ctrl-compass");
+  if (!btn) return;
+  let before = null;
+  const isFlat = () => map.getPitch() < 1 && Math.abs(map.getBearing()) < 1;
+  btn.parentElement.addEventListener("click", (e) => {
+    if (!btn.contains(e.target)) return;
+    e.stopPropagation(); // keep MapLibre's own reset from running as well
+    const duration = reduceMotion ? 0 : 600;
+    if (isFlat()) {
+      map.easeTo({ pitch: before?.pitch ?? (is3D($("style").value) ? 45 : 0), bearing: before?.bearing ?? 0, duration });
+      before = null;
+    } else {
+      before = { pitch: map.getPitch(), bearing: map.getBearing() };
+      map.easeTo({ pitch: 0, bearing: 0, duration });
+    }
+  }, true);
+  map.on("moveend", labelCompass);
+}
+function labelCompass() {
+  const btn = document.querySelector(".maplibregl-ctrl-compass");
+  if (!btn) return;
+  const key = map.getPitch() < 1 && Math.abs(map.getBearing()) < 1 ? "ctl.tilt" : "ctl.north";
+  btn.title = t(key);
+  btn.setAttribute("aria-label", t(key));
 }
 
 const follower = createFollower(map, {
@@ -255,8 +285,10 @@ function ensureLayers() {
 
   map.addLayer({ id: "obstacles", type: "circle", source: "obstacles", paint: { "circle-radius": 8, "circle-color": ["case", ["==", ["get", "hard"], 1], "#d73027", "#f39c12"], "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
   map.addLayer({ id: "obstacles-label", type: "symbol", source: "obstacles", layout: { "text-field": "!", "text-size": 12, "text-font": ["Noto Sans Bold"], "text-allow-overlap": true }, paint: { "text-color": "#fff" } });
-  map.addLayer({ id: "stops", type: "circle", source: "stops", paint: { "circle-radius": 9, "circle-color": ["get", "color"], "circle-stroke-color": "#fff", "circle-stroke-width": 2.5 } });
-  map.addLayer({ id: "stops-label", type: "symbol", source: "stops", layout: { "text-field": ["get", "label"], "text-size": 11, "text-font": ["Noto Sans Bold"], "text-allow-overlap": true }, paint: { "text-color": "#fff" } });
+  // A picked stop (tapped to move it) is bigger, with a yellow ring.
+  const sel = ["==", ["get", "sel"], 1];
+  map.addLayer({ id: "stops", type: "circle", source: "stops", paint: { "circle-radius": ["case", sel, 15, 9], "circle-color": ["get", "color"], "circle-stroke-color": ["case", sel, "#ffc83d", "#fff"], "circle-stroke-width": ["case", sel, 4, 2.5] } });
+  map.addLayer({ id: "stops-label", type: "symbol", source: "stops", layout: { "text-field": ["get", "label"], "text-size": ["case", sel, 15, 11], "text-font": ["Noto Sans Bold"], "text-allow-overlap": true }, paint: { "text-color": "#fff" } });
   // How accurate the found location is: a light circle in metres around the "Jij bent hier" marker.
   map.addLayer({ id: "here-accuracy", type: "fill", source: "here", paint: { "fill-color": "#3b8bd4", "fill-opacity": 0.12 } });
   map.addLayer({ id: "here-accuracy-line", type: "line", source: "here", paint: { "line-color": "#3b8bd4", "line-opacity": 0.5, "line-width": 1.5 } });
@@ -302,42 +334,49 @@ map.on("style.load", () => {
 });
 
 const CLICKABLE = () => ["obstacles", "obstacles-all", ...Object.keys(CATS).map((c) => `poi-${c}`), "route-line", "route-unpaved"].filter((l) => map.getLayer(l));
+// The A, B and stop dots get a generous tap area: they are small, and fingers are not.
+const hitStop = (p) => map.getLayer("stops") && map.queryRenderedFeatures([[p.x - 18, p.y - 18], [p.x + 18, p.y + 18]], { layers: ["stops"] })[0];
 map.on("mousemove", (ev) => {
   if (!router) return;
-  map.getCanvas().style.cursor = map.queryRenderedFeatures(ev.point, { layers: CLICKABLE() }).length ? "pointer" : "";
+  map.getCanvas().style.cursor = moving !== null || hitStop(ev.point) || map.queryRenderedFeatures(ev.point, { layers: CLICKABLE() }).length ? "pointer" : "";
 });
+
+// Moving a point: tap the A, B or stop dot on the map, then tap where it should go.
+// No popup in between, so the map stays clear.
+let moving = null;
+function pickStop(i) {
+  popup?.remove();
+  moving = moving === i ? null : i;
+  drawStops();
+  if (moving !== null) say(t("move.hint", { label: stopTag(i) }));
+  else $("toast").hidden = true;
+}
+function stopTag(i) { return i === 0 ? "A" : i === stops.length - 1 ? "B" : String(i); }
 
 map.on("click", (ev) => {
   if (!router) return;
+  const dot = hitStop(ev.point);
+  if (dot) return pickStop(dot.properties.i);
   const hit = map.queryRenderedFeatures([[ev.point.x - 6, ev.point.y - 6], [ev.point.x + 6, ev.point.y + 6]], { layers: CLICKABLE() })[0];
+  if (moving !== null) {
+    // Tapped a place (toilet, shop): the stop goes there, under its own name.
+    if (hit?.layer.id.startsWith("poi-")) {
+      const c = hit.geometry.coordinates;
+      return placeStop({ lon: +c[0].toFixed(5), lat: +c[1].toFixed(5), name: describe(pois[hit.properties.i]).title });
+    }
+    const s = router.snap(ev.lngLat.lng, ev.lngLat.lat);
+    if (!s) return say(t("msg.noPath"), { icon: "alert", tone: "sun" });
+    return placeStop({ lon: +s.point[0].toFixed(5), lat: +s.point[1].toFixed(5), name: placeName(s.point[0], s.point[1]) });
+  }
   if (hit?.layer.id.startsWith("route-")) return showRoutePopup(ev.lngLat);
   if (hit) return showPopup(hit);
-  const s = router.snap(ev.lngLat.lng, ev.lngLat.lat);
-  if (!s) return say(t("msg.noPath"), { icon: "alert", tone: "sun" });
-  showPointChoice(s.point);
+  say(t("move.first"));
 });
-
-// A tap on the map asks what the point is: start (A), destination (B) or an extra stop.
-function showPointChoice(pt) {
-  popup?.remove();
-  const name = placeName(pt[0], pt[1]);
-  const stop = { lon: +pt[0].toFixed(5), lat: +pt[1].toFixed(5), name };
-  const el = document.createElement("div");
-  el.className = "pop";
-  el.innerHTML = `<strong>${markNames(esc(name))}</strong>
-    <div class="row"><button type="button" data-a="from">${t("pop.from")}</button><button type="button" class="ghost" data-a="to">${t("pop.toB")}</button>
-    <button type="button" class="ghost" data-a="via">${t("pop.via")}</button></div>`;
-  el.addEventListener("click", (e) => {
-    const a = e.target.closest("button")?.dataset.a;
-    if (!a) return;
-    if (a === "from") stops[0] = stop;
-    else if (a === "to") stops[stops.length - 1] = stop;
-    else stops.splice(stops.length - 1, 0, stop);
-    popup.remove();
-    renderStops(); plan();
-  });
-  popup = new maplibregl.Popup({ offset: 8, maxWidth: "280px" }).setLngLat(pt).setDOMContent(el).addTo(map);
-  el.querySelector("button").focus();
+function placeStop(stop) {
+  stops[moving] = stop;
+  moving = null;
+  $("toast").hidden = true;
+  renderStops(); plan();
 }
 
 let popup = null;
@@ -520,7 +559,7 @@ function drawStops() {
     const c = stopCoord(s);
     if (!c) return null;
     const end = i === stops.length - 1, start = i === 0;
-    return point(c, { label: start ? "A" : end ? "B" : String(i), color: start ? STOP_COLORS.start : end ? STOP_COLORS.end : STOP_COLORS.via });
+    return point(c, { i, sel: i === moving ? 1 : 0, label: start ? "A" : end ? "B" : String(i), color: start ? STOP_COLORS.start : end ? STOP_COLORS.end : STOP_COLORS.via });
   }).filter(Boolean);
   map.getSource("stops")?.setData({ type: "FeatureCollection", features });
 }
@@ -781,6 +820,7 @@ function addToilet() {
 // ---------- stops UI ----------
 // Each stop is a large button that opens the place picker (search + grouped list).
 function renderStops() {
+  moving = null; // the stops changed, so a dot picked on the map may no longer be the same stop
   $("stopList").innerHTML = stops.map((s, i) => {
     const start = i === 0, end = i === stops.length - 1;
     const label = start ? t("stop.from") : end ? t("stop.to") : t("stop.via", { n: i });
@@ -1030,21 +1070,25 @@ function locate() {
 }
 
 // ---------- read the route aloud ----------
-// The voice comes from the phone itself, so it also works offline. For Dutch the rider can choose between
-// one female and one male voice (only offered when the device has both); other languages use their default.
-const FEMALE = /ellen|claire|fenna|colette|hanna|lotte|femke|saskia|ilse|anouk|tessa|-tfb|-lfc|-yfr|female|vrouw/i;
+// The voice comes from the device itself where it can, so it also works offline. For Dutch the rider can
+// choose between a female and a male voice (only offered when the device has both); other languages use their default.
+// Names: Apple (Ellen, Claire, Xander), Microsoft (Colette, Fenna, Dena, Maarten, Frank, Arnaud),
+// Google ("Google Nederlands" is female) and Android's Google voice codes (nl-nl-x-tfb, -bmh, ...).
+const FEMALE = /ellen|claire|fenna|colette|dena|hanna|lotte|femke|saskia|ilse|anouk|tessa|google nederlands|-tfb|-lfc|-yfr|female|vrouw/i;
 const MALE = /xander|frank|maarten|arnaud|bram|-bmh|-dma|\bmale\b|\bman\b/i;
 // The page's language right now: "nl", or the language a browser translated it into (it changes <html lang>).
 const pageLang = () => (document.documentElement.lang || "nl").slice(0, 2).toLowerCase();
 function pickVoices(lang = pageLang()) {
   const synth = window.speechSynthesis;
   if (!synth) return {};
-  const all = synth.getVoices().filter((v) => v.lang.replace("_", "-").toLowerCase().startsWith(lang));
-  const offline = all.filter((v) => v.localService);
-  const pool = offline.length ? offline : all;
-  const female = pool.find((v) => FEMALE.test(v.name));
-  const male = pool.find((v) => !FEMALE.test(v.name) && MALE.test(v.name));
-  return { female, male, any: pool[0] };
+  // Many laptops have only one Dutch voice on board; Chrome and Edge add online ones (Google, Microsoft).
+  // Per gender an on-device voice comes first; an online voice only counts while there is internet.
+  const all = synth.getVoices().filter((v) => v.lang.replace("_", "-").toLowerCase().startsWith(lang))
+    .filter((v) => v.localService || navigator.onLine)
+    .sort((a, b) => b.localService - a.localService);
+  const female = all.find((v) => FEMALE.test(v.name));
+  const male = all.find((v) => !FEMALE.test(v.name) && MALE.test(v.name));
+  return { female, male, any: all[0] };
 }
 function renderVoiceChoice() {
   const { female, male } = pickVoices();
@@ -1053,6 +1097,8 @@ function renderVoiceChoice() {
   if (show) document.querySelector(`input[name=voice][value=${safeGet("voice") === "male" ? "male" : "female"}]`).checked = true;
 }
 if (window.speechSynthesis) speechSynthesis.addEventListener?.("voiceschanged", renderVoiceChoice);
+addEventListener("online", renderVoiceChoice);
+addEventListener("offline", renderVoiceChoice);
 renderVoiceChoice();
 document.querySelectorAll("input[name=voice]").forEach((r) => r.addEventListener("change", () => safeSet("voice", r.value)));
 // When the browser translates the page (or undoes it), the voice choice follows.
@@ -1155,7 +1201,7 @@ function labelMapControls() {
   const set = (sel, key) => document.querySelectorAll(sel).forEach((b) => { b.title = t(key); b.setAttribute("aria-label", t(key)); });
   set(".maplibregl-ctrl-zoom-in", "ctl.zoomIn");
   set(".maplibregl-ctrl-zoom-out", "ctl.zoomOut");
-  set(".maplibregl-ctrl-compass", "ctl.north");
+  labelCompass();
   set(".maplibregl-ctrl-geolocate", "ctl.locate");
   const ov = $("overviewBtn");
   if (ov) { ov.querySelector(".lbl").textContent = t("map.overview"); ov.setAttribute("aria-label", t("map.overview.aria")); ov.title = t("map.overview.aria"); }
@@ -1193,7 +1239,7 @@ addEventListener("appinstalled", () => ($("installHelp").hidden = true));
 })();
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") { if (follower.running) stopFollow(); popup?.remove(); return; }
+  if (e.key === "Escape") { if (follower.running) stopFollow(); popup?.remove(); if (moving !== null) pickStop(moving); return; }
   if (e.ctrlKey || e.metaKey || e.altKey || $("help").open || $("picker").open) return;
   if (e.target instanceof Element && e.target.closest("input, select, textarea, [contenteditable]")) return;
   if (e.key === "?") { e.preventDefault(); $("help").showModal(); return; }
