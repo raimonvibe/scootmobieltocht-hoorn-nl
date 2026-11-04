@@ -376,7 +376,8 @@ function placeStop(stop) {
   stops[moving] = stop;
   moving = null;
   $("toast").hidden = true;
-  renderStops(); plan();
+  // Show the whole route, not the close-up at A: then both A and B stay on screen to move again.
+  renderStops(); plan({ view: "overview" });
 }
 
 let popup = null;
@@ -508,7 +509,7 @@ const inRing = (pt, r) => {
 };
 
 
-function plan() {
+function plan({ view = "start" } = {}) {
   if (!router) return;
   stopFollow();
   writeHash();
@@ -540,7 +541,8 @@ function plan() {
   drawRoute(route);
   showResult(route);
   status(t("status.planned", { ms: Math.round(performance.now() - t0) }));
-  startView(route.coords);
+  if (view === "overview" && flownIn) overview(route.coords);
+  else startView(route.coords);
   saved.addRecent(routeName(), location.hash);
   renderSaved();
   refreshWeather();
@@ -1229,13 +1231,23 @@ $("installNow").addEventListener("click", async () => {
   $("installNow").hidden = true;
   if (outcome === "accepted") say(t("install.done"), { icon: "phone", tone: "violet" });
 });
-addEventListener("appinstalled", () => ($("installHelp").hidden = true));
+// Every device sees the same thing: the steps for this device first, the other devices folded away below.
+// Once installed, a short "already on your home screen" replaces this device's steps.
+function installedView() {
+  $("installDone").hidden = false;
+  $("installNow").hidden = true;
+  document.querySelector(".install-os.mine")?.setAttribute("hidden", "");
+}
+addEventListener("appinstalled", installedView);
 (function setupInstallHelp() {
   const ua = navigator.userAgent;
-  const os = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? "ios" : /Android/.test(ua) ? "android" : "";
-  // On a known phone only its own steps; on a computer both, for whoever reads along.
-  document.querySelectorAll(".install-steps").forEach((ol) => (ol.hidden = !!os && ol.dataset.os !== os));
-  if (matchMedia("(display-mode: standalone)").matches || navigator.standalone) $("installHelp").hidden = true;
+  const os = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? "ios" : /Android/.test(ua) ? "android" : "desktop";
+  const other = $("installOther");
+  document.querySelectorAll(".install-os").forEach((el) => {
+    if (el.dataset.os === os) el.classList.add("mine");
+    else other.appendChild(el);
+  });
+  if (matchMedia("(display-mode: standalone)").matches || navigator.standalone) installedView();
 })();
 
 document.addEventListener("keydown", (e) => {

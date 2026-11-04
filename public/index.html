@@ -292,14 +292,21 @@
       <h3><svg class="ic violet" aria-hidden="true" focusable="false"><use href="#i-phone"/></svg> <span data-i18n="help.install"></span></h3>
       <p data-i18n="help.install.p"></p>
       <button type="button" id="installNow" hidden><svg class="ic white" aria-hidden="true" focusable="false"><use href="#i-phone"/></svg> <span data-i18n="installNow"></span></button>
-      <ol class="install-steps" data-os="ios">
-        <li data-i18n-html="help.ios1"></li>
-        <li data-i18n-html="help.ios2"></li>
-      </ol>
-      <ol class="install-steps" data-os="android">
-        <li data-i18n-html="help.and1"></li>
-        <li data-i18n-html="help.and2"></li>
-      </ol>
+      <p id="installDone" data-i18n="help.install.done" hidden></p>
+      <!-- The steps for this device come first; app.js moves the other two into "Op een ander apparaat". -->
+      <div class="install-os" data-os="ios">
+        <h4 data-i18n="help.os.ios"></h4>
+        <ol class="install-steps"><li data-i18n-html="help.ios1"></li><li data-i18n-html="help.ios2"></li></ol>
+      </div>
+      <div class="install-os" data-os="android">
+        <h4 data-i18n="help.os.android"></h4>
+        <ol class="install-steps"><li data-i18n-html="help.and1"></li><li data-i18n-html="help.and2"></li></ol>
+      </div>
+      <div class="install-os" data-os="desktop">
+        <h4 data-i18n="help.os.desktop"></h4>
+        <ol class="install-steps"><li data-i18n-html="help.desk1"></li><li data-i18n-html="help.desk2"></li></ol>
+      </div>
+      <details id="installOther" class="more"><summary data-i18n="help.install.other"></summary></details>
     </section>
 
     <section>

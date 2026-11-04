@@ -285,6 +285,7 @@ dialog.help > form:last-child { padding: 12px 20px 20px; position: sticky; botto
 .help-legend i.dashed { background: repeating-linear-gradient(90deg, #9b7b55 0 6px, transparent 6px 10px); }
 .dot-help { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: #fff; font-weight: 800; font-size: 0.875rem; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); margin-right: 4px; vertical-align: -5px; }
 .install-steps { padding-left: 24px; }
+.install-os h4 { margin: 12px 0 4px; font-size: 1.0625rem; }
 #installNow { width: 100%; margin: 6px 0; }
 .keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 8px 0 12px; font-size: 1rem; }
 .keys dt { text-align: right; }
