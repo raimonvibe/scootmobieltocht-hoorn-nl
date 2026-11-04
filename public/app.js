@@ -1232,11 +1232,16 @@ $("installNow").addEventListener("click", async () => {
   if (outcome === "accepted") say(t("install.done"), { icon: "phone", tone: "violet" });
 });
 // Every device sees the same thing: the steps for this device first, the other devices folded away below.
-// Once installed, a short "already on your home screen" replaces this device's steps.
+// Once installed, a short "already on your home screen" comes first, and this device's steps move to the top
+// of the fold-out: never hidden, so they can still be read (to help someone else, or after removing the app).
 function installedView() {
   $("installDone").hidden = false;
   $("installNow").hidden = true;
-  document.querySelector(".install-os.mine")?.setAttribute("hidden", "");
+  const mine = document.querySelector(".install-os.mine");
+  const summary = $("installOther").querySelector("summary");
+  if (mine) summary.after(mine);
+  summary.dataset.i18n = "help.install.all";
+  summary.textContent = t("help.install.all");
 }
 addEventListener("appinstalled", installedView);
 (function setupInstallHelp() {
