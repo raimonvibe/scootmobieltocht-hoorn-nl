@@ -58,6 +58,7 @@ function say(msg, { long = false, icon = "info", tone = "teal" } = {}) {
   status(msg);
   const t = $("toast");
   t.innerHTML = ic(icon, tone) + dual(markNames(esc(msg)), msg);
+  delete t.dataset.action; // a new message: a tap only closes it
   t.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => (t.hidden = true), long ? 9000 : 4500);
@@ -1092,11 +1093,22 @@ function pickVoices(lang = pageLang()) {
   const male = all.find((v) => !FEMALE.test(v.name) && MALE.test(v.name));
   return { female, male, any: all[0] };
 }
+// Most Android phones give a website only one Dutch voice. Then the choice is that voice set higher or
+// lower, and says so ("Hogere stem", "Lagere stem"), rather than calling it a woman or a man.
+const realVoices = () => { const { female, male } = pickVoices(); return !!female && !!male; };
+const PITCH = { female: 1.15, male: 0.8 };
 function renderVoiceChoice() {
-  const { female, male } = pickVoices();
-  const show = pageLang() === "nl" && !!female && !!male;
+  const { any } = pickVoices();
+  const real = realVoices();
+  const show = pageLang() === "nl" && !!any;
   $("voiceBox").hidden = !show;
-  if (show) document.querySelector(`input[name=voice][value=${safeGet("voice") === "male" ? "male" : "female"}]`).checked = true;
+  if (!show) return;
+  for (const [v, key] of [["female", real ? "voice.female" : "voice.higher"], ["male", real ? "voice.male" : "voice.lower"]]) {
+    const span = document.querySelector(`input[name=voice][value=${v}] + span`);
+    span.dataset.i18n = key;
+    span.textContent = t(key);
+  }
+  document.querySelector(`input[name=voice][value=${safeGet("voice") === "male" ? "male" : "female"}]`).checked = true;
 }
 if (window.speechSynthesis) speechSynthesis.addEventListener?.("voiceschanged", renderVoiceChoice);
 addEventListener("online", renderVoiceChoice);
@@ -1131,6 +1143,7 @@ $("speak").addEventListener("click", () => {
   try { if (voice) u.voice = voice; } catch { /* keep u.lang */ }
   $("speak").dataset.voice = voice?.name || "";
   u.rate = 0.95;
+  if (!translated && !realVoices()) u.pitch = PITCH[safeGet("voice") === "male" ? "male" : "female"];
   u.onend = u.onerror = () => setBtn($("speak"), "speaker", "teal", t("speak"));
   setBtn($("speak"), "stop", "coral", t("speak.stop"));
   synth.speak(u);
@@ -1316,8 +1329,34 @@ const showOnline = () => ($("offline").hidden = navigator.onLine);
 addEventListener("online", () => { showOnline(); refreshWeather(); });
 addEventListener("offline", showOnline);
 showOnline();
+// Updates: an installed app can stay open in the background for days, so coming back to it asks the server
+// for a new version. Once one has taken over, the page reloads, unless the rider is busy with something
+// (then a tap on the message does it, or the next time they come back). The route is in the URL, so it stays.
+let updateWaiting = false;
+const busy = () => follower.running || moving !== null || !!document.querySelector("dialog[open]") ||
+  window.speechSynthesis?.speaking || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName);
+function applyUpdate() {
+  if (!busy()) return location.reload();
+  say(t("update.ready"), { long: true, icon: "info", tone: "teal" });
+  $("toast").dataset.action = "update";
+}
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
-  navigator.serviceWorker.register("sw.js").catch(() => { /* site still works, just not offline */ });
+  const hadOld = !!navigator.serviceWorker.controller; // false on a first visit: nothing old to replace
+  navigator.serviceWorker.register("sw.js").then((reg) => {
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) return;
+      if (updateWaiting) applyUpdate();
+      else reg.update().catch(() => { /* offline */ });
+    });
+  }).catch(() => { /* site still works, just not offline */ });
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadOld || updateWaiting) return;
+    updateWaiting = true;
+    applyUpdate();
+  });
+  $("toast").addEventListener("click", () => { if ($("toast").dataset.action === "update") location.reload(); });
+  // The message can sit behind an open window (help, place picker): try again once that closes.
+  document.addEventListener("close", () => { if (updateWaiting) setTimeout(applyUpdate, 300); }, true);
 }
 
 function safeGet(k) { try { return localStorage.getItem(k); } catch { return null; } }

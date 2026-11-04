@@ -33,7 +33,7 @@ const D = {
     "profile.label": "Soort route", "profile.rustig": "Rustig", "profile.kortst": "Kortst",
     retour: "Ik rij ook weer terug", "retour.loop": "Dit is al een rondje",
     moreSettings: "Meer instellingen", avoid: "Vermijd hekjes, klaphekken en hoge stoepranden",
-    "voice.label": "Voorleesstem", "voice.female": "Vrouw", "voice.male": "Man",
+    "voice.label": "Voorleesstem", "voice.female": "Vrouw", "voice.male": "Man", "voice.higher": "Hogere stem", "voice.lower": "Lagere stem",
     "presets.legend": "Rondritten", "saved.legend": "Mijn routes", recent: "Recent", "layers.legend": "Op de kaart",
     "status.loading": "Kaart en wegennet laden…",
     "footer.check": "Controleer de route ter plekke; de kaart kan afwijken van de werkelijkheid.",
@@ -126,7 +126,7 @@ const D = {
     "loc.fail": "Je locatie kon niet worden bepaald. Op een laptop of computer lukt dat vaak niet, want die heeft geen gps. Op je telefoon werkt het wel. Kies hier een plaats, of tik op de kaart.",
     "speak.none": "Voorlezen werkt niet in deze browser.", "speak.route": "Route van {a} naar {b}.", "speak.time": "{dist}, ongeveer {time}.", "speak.arrive": "Je bent er om {time}.", "speak.back": "Je bent weer terug om {time}.",
     "share.copied": "Link gekopieerd. Plak hem in een bericht of mail.", "share.manual": "Kopieer de link uit de adresbalk.",
-    "install.done": "De planner staat nu op je beginscherm.",
+    "install.done": "De planner staat nu op je beginscherm.", "update.ready": "Er is een nieuwe versie van de planner. Tik hier om te verversen; je route blijft staan.",
     // POI kinds
     "poi.toilet": "Toiletten", "poi.bankje": "Bankjes", "poi.supermarkt": "Supermarkten", "poi.apotheek": "Apotheken", "poi.laadpunt": "Laadpunten", "poi.scootmobielwinkel": "Scootmobielwinkels",
     "poi1.toilet": "toilet", "poi1.bankje": "bankje", "poi1.supermarkt": "supermarkt", "poi1.apotheek": "apotheek", "poi1.laadpunt": "laadpunt", "poi1.scootmobielwinkel": "scootmobielwinkel",

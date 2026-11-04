@@ -35,7 +35,7 @@ Gebouwd naar het voorbeeld van [amsterdam-metro-v2](https://github.com/raimonvib
 - 🔎 **Plaats zoeken**: tik op Van of Naar en typ een deel van de naam ("kers" → Kersenboogerd), of kies uit de lijst per plaats
 - 🎨 **Eigen kleurige iconen** met kleurverloop in plaats van emoji, overal hetzelfde
 - 🌍 **Een Nederlandse website die goed te vertalen is**: wie de pagina via Google, Chrome of Safari vertaalt, krijgt alle tekst vertaald, behalve plaats- en straatnamen (anders wordt "Hoorn" "Horn" en "Nieuwe Steen" "New Stone"). De opmaak buigt mee met langere vertalingen (getest met Oekraïens, tot 30% langer) en voorlezen gebruikt dan een stem in de vertaalde taal
-- 🗣️ **Offline voorleesstem**: de stem van je eigen telefoon; je kiest een vrouwen- of mannenstem (alleen getoond als je telefoon ze allebei heeft)
+- 🗣️ **Offline voorleesstem**: de stem van je eigen telefoon; je kiest een vrouwen- of mannenstem, of op telefoons met maar één stem (zoals de meeste Android-telefoons) een hogere of lagere stem
 - 🏙️ **Start bij punt A**: de kaart zoomt in op het vertrekpunt, schuin, zodat je de 3D-gebouwen ziet. **Hele route** toont het overzicht
 - 🌦️ **Weer voor onderweg**: het weerbericht voor 24 uur wordt bewaard als je online bent, zodat je het zonder internet nog hebt
 - ♿ **Toegankelijk**: tekst vanaf 17 px, knoppen van 48 px, alles met toetsenbord en schermlezer te bedienen, rekening met "beweging verminderen" en hoog contrast; gecontroleerd met axe (WCAG 2.2 AA)

@@ -1,6 +1,6 @@
 // Offline support. The app itself and the route data are cached on install; map tiles, fonts and
 // libraries are kept as you view them. Bump VERSION when you deploy changes to the app files.
-const VERSION = "v36";
+const VERSION = "v38";
 const APP = `app-${VERSION}`;
 const RUNTIME = "runtime";
 const MAX_RUNTIME = 4000; // ~ a few hundred MB at most; old entries are dropped first
@@ -15,7 +15,8 @@ const SHELL = [
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(APP).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // Straight from the server, so a new version never stores files the browser still had from before.
+  e.waitUntil(caches.open(APP).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (e) => {
@@ -40,10 +41,11 @@ self.addEventListener("fetch", (e) => {
   // Weather must be fresh; don't cache it.
   if (url.hostname === "api.open-meteo.com") return;
 
-  // App files: network first (so updates arrive), cache when offline.
+  // App files: network first (so updates arrive), cache when offline. "no-cache" makes the browser check
+  // with the server every time, whatever the hosting's cache headers say (unchanged files cost a tiny reply).
   if (url.origin === location.origin) {
     e.respondWith(
-      fetch(req).then((res) => {
+      fetch(req, { cache: "no-cache" }).then((res) => {
         if (res.ok) { const copy = res.clone(); caches.open(APP).then((c) => c.put(req, copy)); }
         return res;
       }).catch(() => caches.match(req, { ignoreSearch: true }).then((r) => r || caches.match("index.html"))),
