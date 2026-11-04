@@ -1,0 +1,16 @@
+# Dependabot version updates — runs every Monday.
+# This site has no package.json, so the only thing Dependabot can track is
+# the GitHub Actions used by the workflows. Libraries loaded from a CDN
+# (unpkg) are checked by .github/workflows/dependency-updates.yml instead.
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Amsterdam
+    open-pull-requests-limit: 5

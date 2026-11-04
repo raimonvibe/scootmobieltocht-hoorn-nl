@@ -1,0 +1,65 @@
+# Weekly check of libraries loaded from a CDN with a pinned version
+# (for example https://unpkg.com/maplibre-gl@5.6.0/...). Dependabot cannot
+# see these, so this job compares each pin with the latest npm release and
+# reports the result in the job summary. It reports only; it changes nothing.
+name: Dependency updates
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/dependency-updates.yml
+      - public/**
+  schedule:
+    # Every Monday 06:00 UTC (08:00 in the Netherlands in summer).
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check CDN-pinned libraries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare pinned versions with npm
+        run: |
+          set -euo pipefail
+
+          pins="$(grep -rhoE 'https://(unpkg\.com|cdn\.jsdelivr\.net/npm)/(@[a-z0-9._-]+/)?[a-z0-9._-]+@[0-9][0-9A-Za-z.+-]*' public \
+            | sed -E 's#https://(unpkg\.com|cdn\.jsdelivr\.net/npm)/##' | sort -u)"
+
+          {
+            echo "# Dependency updates"
+            echo ""
+            echo "Checked $(date -u +'%Y-%m-%d %H:%M UTC'). GitHub Actions updates come from Dependabot PRs."
+            echo ""
+            echo "| Package | Pinned | Latest | Status |"
+            echo "| --- | --- | --- | --- |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          outdated=0
+          for pin in $pins; do
+            name="${pin%@*}"
+            pinned="${pin##*@}"
+            latest="$(npm view "$name" version 2>/dev/null || echo unknown)"
+            if [ "$latest" = "unknown" ]; then
+              status="could not check"
+            elif [ "$pinned" = "$latest" ]; then
+              status="up to date"
+            else
+              status="update available"
+              outdated=$((outdated + 1))
+              echo "::warning::$name is pinned to $pinned; latest is $latest. Update every URL that uses it (also public/sw.js)."
+            fi
+            echo "| $name | $pinned | $latest | $status |" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          if [ -z "$pins" ]; then
+            echo "No CDN-pinned libraries found." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Libraries with an update: $outdated" >> "$GITHUB_STEP_SUMMARY"
