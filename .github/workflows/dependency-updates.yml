@@ -11,8 +11,8 @@ on:
       - .github/workflows/dependency-updates.yml
       - public/**
   schedule:
-    # Every Monday 06:00 UTC (08:00 in the Netherlands in summer).
-    - cron: "0 6 * * 1"
+    # Every Saturday 06:00 UTC (08:00 in the Netherlands in summer).
+    - cron: "0 6 * * 6"
   workflow_dispatch:
 
 permissions:

@@ -1,4 +1,4 @@
-# Dependabot version updates — runs every Monday.
+# Dependabot version updates — runs every Saturday.
 # This site has no package.json, so the only thing Dependabot can track is
 # the GitHub Actions used by the workflows. Libraries loaded from a CDN
 # (unpkg) are checked by .github/workflows/dependency-updates.yml instead.
@@ -10,7 +10,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
-      day: monday
+      day: saturday
       time: "09:00"
       timezone: Europe/Amsterdam
     open-pull-requests-limit: 5
