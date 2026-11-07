@@ -1,5 +1,13 @@
 # Scootmobiel Hoorn
 
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![PWA](https://img.shields.io/badge/PWA-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)
+![MapLibre](https://img.shields.io/badge/MapLibre-396CB2?style=for-the-badge&logo=maplibre&logoColor=white)
+![deck.gl](https://img.shields.io/badge/deck.gl-000000?style=for-the-badge)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
+
 ![Een scootmobiel op een fietspad langs een sloot, met molens en koeien in het West-Friese polderlandschap](public/img/delen.jpg)
 
 > **Live:** [scootmobieltocht-hoorn-nl.vercel.app](https://scootmobieltocht-hoorn-nl.vercel.app/) · Site ontwikkeld door [Stefan](https://raimonvibe.nl)
